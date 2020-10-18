@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css"
+        integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+
+    <script src="https://code.jquery.com/jquery-3.4.1.slim.min.js"
+        integrity="sha384-J6qa4849blE2+poT4WnyKhv5vZF5SrPo0iEjwBvKU7imGFAV0wwj1yYfoRSJoZ+n"
+        crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"
+        integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo"
+        crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js"
+        integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6"
+        crossorigin="anonymous"></script>
+
+    <link href="vendor/fontawesome-free/css/all.min.css" rel="stylesheet" type="text/css">
+    <link
+        href="https://fonts.googleapis.com/css?family=Nunito:200,200i,300,300i,400,400i,600,600i,700,700i,800,800i,900,900i"
+        rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jQuery.Marquee/1.5.0/jquery.marquee.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-easing/1.4.1/jquery.easing.min.js"></script>
+
+    <link href="index.css" rel="stylesheet">
+
+    <script src="https://cdn.jsdelivr.net/npm/js-cookie@rc/dist/js.cookie.min.js"></script>
+
+    <title>Delay System</title>
+</head>
+
+<body>
+    <script>
+        async function ipcheck(){
+            var url = window.location.href;
+            window.ip = url.split('/')[2].split(':')[0];
+            window.port = "8000"
+            window.delaySystem = "/delay-system"
+            console.log(ip)
+            if (ip == "" || ip == "localhost") {
+                window.ip = "http://127.0.0.1"
+                service_recovery_port = "5002"
+                passenger_port = "5003"
+                flight_port = "5001"
+                flight_status_port = "5004"
+                payment_port = "5005"
+            }
+            else{
+                window.ip = "http://" + ip
+            }
+            console.log(ip)
+        };
+        ipcheck()
+    </script>
+    <!-- Items needs for authentication -->
+    <div id="api_modal" class="modal fade" data-backdrop="static" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-login">
+            <div class="modal-content">
+                <form id="api_modal_form">
+                    <div class="modal-header">
+                        <h4 class="modal-title">Flight Staff Access</h4>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <div class="clearfix">
+                                <label>Username</label>
+                            </div>
+                            <input type="text" class="form-control" required="required" id='oauth-username'>
+                        </div>
+                        <div class="form-group">
+                            <div class="clearfix">
+                                <label>Password</label>
+                            </div>
+                            <input type="password" class="form-control" required="required" id='oauth-password'>
+                        </div>
+                        <div id="modal_api_msg">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <input type="submit" class="btn btn-primary pull-right" value="Login">
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <script>
+    async function api_check(){
+    try{
+        var bearer_token = Cookies.get('token');
+        if (bearer_token == null){
+            $('#api_modal').modal('show')
+            }
+            else{
+                if (ip == "http://127.0.0.1") {
+                    port = "5004"
+                    verifyURL = ip + ":" + port + "/flight-status/active-message";;
+                } else {
+                    verifyURL = ip + ":" + port + delaySystem + "/flight_status/flight-status/active-message";
+                }
+                window.token_type = Cookies.get('token_type');
+                window.access_token = Cookies.get('token');
+                const response =
+                    await fetch(
+                    verifyURL, { method: 'GET', headers: {
+                    'Authorization': token_type + ' ' + access_token,
+			        'Content-Type': 'application/x-www-form-urlencoded'
+                     } });
+                const data = await response.json();
+                if (response.status == 401){
+                    Cookies.remove('token');
+                    Cookies.remove('token_type');
+                    alert('Your login credentials have expired, please login again')
+                    location.reload()
+                }
+            }
+    }
+    catch(error){
+        alert(error)
+    }}
+    api_check()
+    </script>
+    <script>
+    $("#api_modal_form").submit(async (event) => {
+        event.preventDefault()
+        var client_id = $("#oauth-username").val()
+        var client_secret = $("#oauth-password").val()
+        var grant_type = "client_credentials"
+        var provision_key = "5XlzYHaMyaEtQZAub1EXIbKTdJI0bpYd"
+        if (ip == "http://127.0.0.1") {
+            port = "5004"
+            checkURL = "http://localhost:8000/oauth2/token"
+        } else {
+            checkURL = ip + ":8000/oauth2/token"
+        }
+
+        //var checkURL = "http://localhost:8000/oauth2/token"
+        var auth_request = 'grant_type=client_credentials&client_id=' + client_id + '&client_secret=' + client_secret
+        console.log(auth_request)
+        try {
+            const response = await fetch(
+            checkURL, { method: 'POST' ,headers: { 'Content-Type': 'application/x-www-form-urlencoded','X-Forwarded-Proto':'https' },
+            body: 'grant_type=client_credentials&client_id=' + client_id + '&client_secret=' + client_secret
+            });
+            const data = await response.json();
+            bearer_token = data.access_token;
+            token_type = data.token_type;
+            console.log(data)
+            if (response.status != 200){
+                alert('Authentication invalid, please try again')
+            }
+            else{
+                $('#api_modal').modal('hide');
+                Cookies.set('token',bearer_token);
+                window.bearer_token
+                console.log(bearer_token)
+                Cookies.set('token_type',token_type);
+                window.token_type
+                console.log(Cookies.get('token'));
+                location.reload()
+            }
+        } catch (error) {
+            alert(error)
+        }
+    })
+    </script>
+
+    <!-- Nav bar starts-->
+
+    <nav class="navbar navbar-expand-lg navbar-dark" style="background-color: #003678;">
+        <a class="navbar-brand" href="#"><img class="img-profile" src="image/logo.png"></a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+            <ul class="navbar-nav mr-auto">
+                <li class="nav-item active">
+                    <a class="nav-link" href="index.html">Home <span class="sr-only">(current)</span></a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="flight.html">Flight</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="service_recovery.html">Service Recovery</a>
+                </li>
+            </ul>
+            <ui class="nav-item dropdown ml-auto">
+                <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"> <span style="color:#fff;">Flight-Agent</span>
+                <img class="img-profile rounded-circle" src="image/profile.png">
+                </a>
+                <div class="shadow-sm dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdownMenuLink">
+                    <a class="dropdown-item" href="manager.html">Manage</a>
+                    <a class="dropdown-item" id='logout'>Log out</a>
+                </div>
+            </ui>
+    </nav>
+    <script>
+        $("#logout").click((event)=>{
+            Cookies.remove('token');
+            Cookies.remove('token_type');
+            alert('Logout Successful!')
+            location.reload()
+        });
+    </script>
+
+    <!-- Navbar ends -->
+
+    <marquee behavior="scroll" direction="left" id="scroll_header">
+        Please login to use flight delay system!
+    </marquee>
+
+    <script>
+        $(document).ready(function(){
+            $(async() => {
+                if (ip == "http://127.0.0.1") {
+                    port = "5004"
+                    scrollURL = ip + ":" + port + "/flight-status/active-message";
+                } else {
+                    scrollURL = ip + ":" + port + delaySystem + "/flight_status/flight-status/active-message";
+                }
+                //scrollURL = "http://127.0.0.1:5004/flight-status/active-message"
+                try {
+                const response =
+                    await fetch(
+                    scrollURL, { method: 'GET', headers: {
+                    'Authorization': token_type + ' ' + access_token,
+			        'Content-Type': 'application/x-www-form-urlencoded'
+                     } });
+                    const data = await response.json();
+                    var message_data = data.message;
+                    if (message_data.length == 0) {
+                        $('#scroll_header').text('No message currently avaliable')
+                    }
+                    else {
+                        var full_msg = "";
+                        for (index = 0; index < message_data.length; index++){
+                            var msg = message_data[index];
+                            var main_msg = msg.message;
+                            var issuedatetime = msg.issue_datetime;
+                            var main_mid = msg.mid;
+                            var count = index + 1
+                            var temp = "     " + main_msg + " (Issued on: " + issuedatetime + ")         |         ";
+                            console.log(temp);
+                            full_msg = full_msg + temp;
+                        }
+                        $('#scroll_header').text(full_msg)
+                    }
+                } catch (error) {
+                    $('#scroll_header').text('No message currently avaliable');
+                }
+            })
+        });
+    </script>
+    <div class="jumbotron p-4" style="background-color: transparent;">
+        <h1 class="h3 p-2 text-gray-800">Dashboard</h1>
+        <!-- Main information starts -->
+        <div class="row row-cols-1 row-cols-md-3">
+            <div class="col mb-4">
+                <div class="card h-100 border-left-primary">
+                    <div class="card-body">
+                        <div class="row align-items-center">
+                            <div class="col">
+                                <h5 class="card-title main-title">Delayed Flight</h5>
+                                <p class="card-text h2" id="fid"></p>
+                            </div>
+                            <div class="col-auto">
+                                <img class="icon-size" src="image/take-off.svg">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col mb-4">
+                <div class="card h-100">
+                    <div class="card-body border-left-primary">
+                        <div class="row align-items-center">
+                            <div class="col">
+                                <h5 class="card-title main-title">Recovery</h5>
+                                <p class="card-text h2" id='recovery_body'></p>
+                            </div>
+                            <div class="col-auto">
+                                <img class="icon-size" src="image/information.svg">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Delayed flight information -->
+
+        <div id="accordion">
+            <div class="card shadow mb-4">
+                <div class="card-header" id="headingOne">
+                    <h5 class="mb-0">
+                        <a href class="btn-link" data-toggle="collapse" data-target="#collapseOne"
+                            aria-expanded="true" aria-controls="collapseOne">
+                            Delayed Flight Details
+                        </a>
+                    </h5>
+                </div>
+
+                <div id="collapseOne" class="collapse show" aria-labelledby="headingOne" data-parent="#accordion">
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-striped" id="flight_info">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">Flight No.</th>
+                                        <th scope="col">Flight Routing</th>
+                                        <th scope="col">Stated Departure Time</th>
+                                        <th scope="col">Expected Departure Time</th>
+                                        <th scope="col">Stated Arrival Time</th>
+                                        <th scope="col">Expected Arrival Time</th>
+                                        <th scope="col">Flight Status</th>
+                                    </tr>
+                                </thead>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+        <script>
+            $(document).ready(function(){
+                $(async() => {
+                //Change serviceURL to your own
+                if (ip == "http://127.0.0.1") {
+                    port = "5004"
+                    var serviceURL = ip + ":" + port + "/checkflight";
+                } else {
+                    var serviceURL = ip + ":" + port + delaySystem + "/flight_status/checkflight";
+                }
+                //serviceURL = "http://127.0.0.1:5004/checkflight"
+                    try {
+                        const response =
+                        await fetch(
+                        serviceURL, { method: 'GET', headers: {
+                        'Authorization': token_type + ' ' + access_token,
+    			        'Content-Type': 'application/x-www-form-urlencoded'
+                         } });
+                        const data = await response.json();
+                        var flight = data.message;
+                        var rows = "";
+                        eachRow =
+                            "<td>" + flight.fid + "</td>" +
+                            "<td>" + flight.depart + " TO " + flight.arrive + "</td>" +
+                            "<td>" + flight.std + "</td>" +
+                            "<td>" + flight.etd + "</td>" +
+                            "<td>" + flight.sta + "</td>" +
+                            "<td>" + flight.eta + "</td>" +
+                            "<td>" + flight.status + "</td>";
+                        rows += "<tbody><tr>" + eachRow + "</tr></tbody>";
+                        $('#flight_info').append(rows);
+                        $('#fid').append(flight.fid)
+                    } catch (error) {
+                        $('#fid').append("No Flight Found")
+                        $('#flight_info').append(
+                        "<tbody><tr><tr><td  colspan=7>No flight is found in the system</td></tr></tbody>");
+                    } // error
+                    if (ip == "http://127.0.0.1") {
+                        port = "5003"
+                        var serviceURL = ip + ":" + port + "/passenger-all";
+                    } else {
+                        var serviceURL = ip + ":" + port + delaySystem + "/passenger/passenger-all";
+                    }
+                    //var serviceURL = "http://127.0.0.1:5003/passenger-all";
+                    try {
+                        const response =
+                        await fetch(
+                        serviceURL, { method: 'GET' , headers: {
+                        'Authorization': token_type + ' ' + access_token,
+    			        'Content-Type': 'application/x-www-form-urlencoded'
+                         } });
+                        const data = await response.json();
+                        var count = data.Passengers.length;
+                        $('#recovery_body').text(count + " Passengers Affected")
+                    } catch {
+                        $('#recovery_body').text("Unable to retrieve passengers.")
+                    }
+                })
+            });
+        </script>
+
+
+        <!-- Passenger details -->
+
+        <div class="card mb-4 shadow" id="passenger_result">
+            <div class="card-header secondary-card-header " ;>
+                Passenger Details
+            </div>
+            <div class="card-body">
+                <p class="card-text">Enter passenger's flight details:</p>
+                <!-- Passenger detail form -->
+                <form id="pid_form">
+                    <div class="form-row align-items-center">
+                        <div class="col-sm-3 my-1">
+                            <label class="sr-only" for="inlineFormInputName">Name</label>
+                            <input type="text" class="form-control" id="pid_text" placeholder="Passenger No.">
+                        </div>
+                        <div class="col-auto my-1">
+                            <button type="submit" class="btn btn-primary">Submit</button>
+                        </div>
+                        <div class="col-auto my-1" >
+                            <span><div class="" role="status" id='loading_spinner_search'>
+                            </div></span>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <script>
+                $(document).ready(function() {
+                $('#details').hide();
+                $('#pid_form').submit(function(){
+                        $('#details').show();
+                });
+            });
+
+            var input = document.getElementById("pid_text");
+            input.addEventListener("keyup", function(event) {
+              if (event.keyCode === 13) {
+               event.preventDefault();
+               document.getElementById("myBtn").click();
+              }
+            });
+
+            </script>
+            <div id="details">
+            <!-- Passenger Tabs -->
+            <ul class="nav nav-tabs mt-3" id="myTab" role="tablist">
+                <li class="nav-item">
+                    <a class="nav-link active" id="customer_info-tab" data-toggle="tab" href="#customer_info" role="tab"
+                        aria-controls="customer_info" aria-selected="false">Customer Information</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="home-tab" data-toggle="tab" href="#home" role="tab"
+                        aria-controls="home" aria-selected="true">Flight</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="vouchers-tab" data-toggle="tab" href="#vouchers" role="tab"
+                        aria-controls="vouchers" aria-selected="false">Vouchers</a>
+                </li>
+            </ul>
+            <!-- Passenger Flight Details -->
+            <div class="tab-content" id="myTabContent">
+                <div class="tab-pane fade" id="home" role="tabpanel" aria-labelledby="home-tab">
+                    <div class="card mb-4">
+                        <div class="card-body">
+                            <div class="row align-items-center">
+                                <div class="col-auto" >
+                                <h5 class="card-title">Current Flight Bookings</h5>
+                                <p class="card-text">This shows all flights currently booked by the passenger.</p>
+                                </div>
+                                <div class="col-auto" >
+                                <button type="button" class="btn btn-primary" onclick="window.location.href = 'flight.html';">Access Flight Booking</button>
+                                </div>
+                            </div>
+
+                            <div id="that_table">
+                                <div class="table-responsive">
+                                <table class="table table-striped" id='pax_flight_data'>
+                                    <thead>
+                                        <tr>
+                                            <th scope="col">Flight No.</th>
+                                            <th scope="col">Departure Date</th>
+                                            <th scope="col">Departure Airport</th>
+                                            <th scope="col">Departure Time</th>
+                                            <th scope="col">Arrival Date</th>
+                                            <th scope="col">Arrival Airport</th>
+                                            <th scope="col">Arrival Time</th>
+                                            <th scope="col">Travel Time</th>
+                                            <th scope="col">Fare Class</th>
+                                            <th scope="col">Ticket Status</th>
+                                        </tr>
+                                    </thead>
+                                </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Passenger Vouchers -->
+
+                <div class="tab-pane fade" id="vouchers" role="tabpanel" aria-labelledby="vouchers-tab">
+                    <div class="card mb-4">
+                        <div class="card-body">
+                            <div class="row align-items-center">
+                                <div class="col-auto" >
+                                    <h5 class="card-title">Vouchers Issued</h5>
+                                    <p class="card-text">This lists all vouchers issued to the passenger
+                                    </p>
+                                </div>
+                                <div class="col-auto" >
+                                    <button type="button" class="btn btn-primary" onclick="window.location.href = 'service_recovery.html';">Voucher Dashboard</button>
+                                </div>
+                            </div>
+                            <div id="voucher_table">
+                                <div class="table-responsive">
+                                <table class="table table-striped" id='pax_voucher_data'>
+                                    <thead>
+                                        <tr>
+                                            <th scope="col">Voucher No.</th>
+                                            <th scope="col">Voucher Type</th>
+                                            <th scope="col">Entitlement</th>
+                                            <th scope="col">Issue DateTime</th>
+                                            <th scope="col">Validity</th>
+                                            <th scope="col">Remarks</th>
+                                        </tr>
+                                    </thead>
+                                </table>
+                            </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Passenger Profile -->
+                <div class="tab-pane fade show active" id="customer_info" role="tabpanel" aria-labelledby="customer_info-tab">
+                    <div class="card mb-4">
+                        <div class="card-body">
+                            <h5 class="card-title">Customer Information</h5>
+                            <p class="card-text">Customer information associated with the booking can be found here
+                            <div id="passenger_info">
+                            <form id='pax_details'>
+                            <input type="text" class="form-control" name="pid" placeholder="NIL" id="passenger_id" hidden>
+                            <div class="container">
+                                <div class="row">
+                                    <div class="col form-group">
+                                    <label for="pnr">Passenger Numeric Record</label>
+                                    <input type="text" class="form-control" name="pnr" placeholder="NIL" readonly>
+                                    </div>
+                                    <div class="col form-group">
+                                    <label for="passport_number">Passport Number</label>
+                                    <input type="text" class="form-control" name="passport_number" placeholder="NIL" readonly>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col form-group">
+                                    <label for="family_name">Family Name</label>
+                                    <input type="text" class="form-control" name="family_name" placeholder="NIL" readonly>
+                                    </div>
+                                    <div class="col form-group">
+                                    <label for="given_name">Given Name</label>
+                                    <input type="text" class="form-control" name="given_name" placeholder="NIL" readonly>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col form-group">
+                                    <label for="contact_number">Contact Number</label>
+                                    <input type="text" class="form-control" name="contact_number" placeholder="NIL" readonly>
+                                    </div>
+                                    <div class="col form-group">
+                                    <label for="eticket_number">eTicket Number</label>
+                                    <input type="text" class="form-control" name="eticket_number" placeholder="NIL" readonly>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col form-group">
+                                    <label for="seat_number">Seat Number</label>
+                                    <input type="text" class="form-control" name="seat_number" placeholder="NIL" readonly>
+                                    </div>
+                                    <div class="col form-group">
+                                    <label for="fare_class">Fare Class</label>
+                                    <input type="text" class="form-control" name="fare_class" placeholder="NIL" readonly>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col form-group">
+                                    <label for="remarks">Remarks</label>
+                                    <input type="text" class="form-control" name="remarks" placeholder="NIL" readonly>
+                                    </div>
+                                </div>
+                                <button type="button" data-toggle="modal" data-target="#edit_passenger" id= "edit_passenger_button" class="btn btn-primary float-right" >Edit Passenger Details</button>
+                            </div>
+                            </form>
+                        </div>
+                        </div>
+                    </div>
+                    <div class="modal fade bd-example-modal-xl" tabindex="-1" role="dialog" id="edit_passenger">
+                        <div class="modal-dialog modal-xl" role="document">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">Edit Passenger Details</h5>
+                                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                    </button>
+                                </div>
+                                <div class="modal-body">
+                                <form id="edit_passenger_form">
+                                    <div class="row">
+                                        <div class="col form-group">
+                                        <label for="pnr">Passenger ID</label>
+                                        <input type="text" class="form-control" name="pid" id="form_pid" placeholder="NIL" readonly>
+                                        </div>
+                                        <div class="col form-group">
+                                        <label for="pnr">Passenger Numeric Record</label>
+                                        <input type="text" class="form-control" name="pnr" id="form_pnr" placeholder="NIL">
+                                        </div>
+                                        <div class="col form-group">
+                                        <label for="passport_number">Passport Number</label>
+                                        <input type="text" class="form-control" name="passport_number" id="form_passport_number" placeholder="NIL">
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col form-group">
+                                        <label for="family_name">Family Name</label>
+                                        <input type="text" class="form-control" name="family_name" id="form_family_name" placeholder="NIL">
+                                        </div>
+                                        <div class="col form-group">
+                                        <label for="given_name">Given Name</label>
+                                        <input type="text" class="form-control" name="given_name" id="form_given_name" placeholder="NIL">
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col form-group">
+                                        <label for="contact_number">Contact Number</label>
+                                        <input type="text" class="form-control" name="contact_number" id="form_contact_number" placeholder="NIL">
+                                        </div>
+                                        <div class="col form-group">
+                                        <label for="eticket_number">eTicket Number</label>
+                                        <input type="text" class="form-control" name="eticket_number" id="form_eticket_number" placeholder="NIL">
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col form-group">
+                                        <label for="seat_number">Seat Number</label>
+                                        <input type="text" class="form-control" name="seat_number" id="form_seat_number" placeholder="NIL">
+                                        </div>
+                                        <div class="col form-group">
+                                        <label for="fare_class">Fare Class</label>
+                                        <input type="text" class="form-control" name="fare_class" id="form_fare_class" placeholder="NIL">
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col form-group">
+                                        <label for="remarks">Remarks</label>
+                                        <input type="text" class="form-control" name="remarks" id="form_remarks" placeholder="NIL">
+                                        </div>
+                                    </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                                    <button type="submit" class="btn btn-primary" id='submit_passenger'>Make Changes</button>
+                                </div>
+                                </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <script>
+                        $("#submit_passenger").click(async(event) => {
+                            event.preventDefault();
+                            var pid = $("#form_pid").val();
+                            var pnr = $("#form_pnr").val();
+                            var passport_number = $("#form_passport_number").val();
+                            var family_name = $("#form_family_name").val();
+                            var given_name = $("#form_given_name").val();
+                            var eticket_number = $("#form_eticket_number").val();
+                            var seat_number = $("#form_seat_number").val();
+                            var fare_class = $("#form_fare_class").val();
+                            var remarks = $("#form_remarks").val();
+                            if (ip == "http://127.0.0.1") {
+                                port = "5003"
+                                var editpassengerURL = ip + ":" + port + "/passenger-update/" + pid;
+                            } else {
+                                var editpassengerURL = ip + ":" + port + delaySystem + "/passenger/passenger-update/" + pid;
+                            }
+                            //var editpassengerURL = "http://127.0.0.1:5003/passenger-update/" + pid;
+                            var passenger_info_edited = {
+                                'pid':pid,
+                                'pnr':pnr,
+                                'passport_number':passport_number,
+                                'family_name':family_name,
+                                'given_name':given_name,
+                                'eticket_number':eticket_number,
+                                'seat_number':seat_number,
+                                'fare_class':fare_class,
+                                'remarks':remarks
+                            }
+                            try {
+                                const response =
+                                await fetch(
+                                editpassengerURL, { method: 'POST', headers: { 'Authorization': token_type + ' ' + access_token, "Content-Type": "application/json" }, body: JSON.stringify(passenger_info_edited) }
+                                );
+                                const data = await response.json();
+                                console.log(data);
+                                if(response.status == 201){
+                                    alert('Passenger information successfully changed');
+                                    $("#edit_passenger").modal('hide')
+                                    location.reload()
+                                    $("#pid_text").val(pid)
+                                }
+                                else{
+                                    alert('Error in making changes to passenger information, please try again');
+                                }
+                            } catch (error) {
+                                alert('Error in making changes to passenger information, please try again');
+                            }
+                        });
+                    </script>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="jquery.formHelper.js"></script>
+    <script>
+        $("#edit_passenger_button").click(async(event) => {
+            event.preventDefault();
+            $('#loading_spinner_search').addClass('spinner-border text-primary');
+            var pid = $("#passenger_id").val();
+            if (ip == "http://127.0.0.1") {
+                port = "5003"
+                var passengerURL = ip + ":" + port + "/passenger-search/" + pid;
+            } else {
+                var passengerURL = ip + ":" + port + delaySystem + "/passenger/passenger-search/" + pid;
+            }
+            //passengerURL = "http://127.0.0.1:5003/passenger-search" + pid;
+            try {
+                const response =
+                await fetch(
+                passengerURL, { method: 'GET' , headers: {
+                'Authorization': token_type + ' ' + access_token,
+                'Content-Type': 'application/x-www-form-urlencoded'
+                 } });
+                const data = await response.json();
+                var info = {pid:data.pid,
+                        pnr:data.pnr,
+                        passport_number:data.passport_number,
+                        family_name:data.family_name,
+                        given_name:data.given_name,
+                        contact_number:data.contact_number,
+                        eticket_number:data.eticket_number,
+                        seat_number:data.seat_number,
+                        fare_class:data.fare_class,
+                        remarks:data.remarks};
+                $('#edit_passenger_form').populateForm(info);
+                $('#edit_passenger').modal('show');
+            } catch (error) {
+
+            }
+        })
+        $("#pid_form").submit(async(event) => {
+            event.preventDefault();
+            var pid = $('#pid_text').val();
+            if (ip == "http://127.0.0.1") {
+                port = "5001"
+                var flightURL = ip + ":" + port + "/flight-records/" + pid;
+            } else {
+                var flightURL = ip + ":" + port + delaySystem + "/flight/flight-records/" + pid;
+            }
+            //flightURL = "http://127.0.0.1:5001/flight-records"+pid
+            try {
+                const response =
+                await fetch(
+                flightURL, { method: 'GET' , headers: {
+                'Authorization': token_type + ' ' + access_token,
+                'Content-Type': 'application/x-www-form-urlencoded'
+                 } });
+                const data = await response.json();
+                var flights = data.message;
+                var rows = "";
+                $('#pax_flight_data').find('tbody').remove();
+                for (const flight of flights) {
+                    eachRow =
+                        "<td>" + flight.fid + "</td>" +
+                        "<td>" + flight.departure_date + "</td>" +
+                        "<td>" + flight.departure_airport + "</td>" +
+                        "<td>" + flight.departure_time + "</td>" +
+                        "<td>" + flight.arrival_date + "</td>" +
+                        "<td>" + flight.arrival_airport + "</td>" +
+                        "<td>" + flight.arrival_time + "</td>" +
+                        "<td>" + flight.travel_time + "</td>" +
+                        "<td>" + flight.fare_class + "</td>" +
+                        "<td>" + flight.ticket_status + "</td>";
+                    rows += "<tbody><tr>" + eachRow + "</tr></tbody>";
+                }
+                $('#pax_flight_data').append(rows);
+            } catch (error) {
+                $('#pax_flight_data').find('tbody').remove();
+                $('#pax_flight_data').append(
+                "<tbody><tr><tr><td  colspan=10>No flights found for this passenger</td></tr></tbody>");
+            }
+            if (ip == "http://127.0.0.1") {
+                port = "5002"
+                var voucherURL = ip + ":" + port + "/pax-vouchers/" + pid;
+            } else {
+                var voucherURL = ip + ":" + port + delaySystem + "/service_recovery/pax-vouchers/" + pid;
+            }
+            //voucherURL = "http://127.0.0.1:5002/pax-vouchers/"+pid
+            try {
+                const response =
+                await fetch(
+                voucherURL, { method: 'GET' , headers: {
+                'Authorization': token_type + ' ' + access_token,
+                'Content-Type': 'application/x-www-form-urlencoded'
+                 } });
+                const data = await response.json();
+                var flights = data.vouchers;
+                var rows = "";
+                $('#pax_voucher_data').find('tbody').remove();
+                for (const flight of flights) {
+                    eachRow =
+                        "<td>" + flight.vid + "</td>" +
+                        "<td>" + flight.voucher_type + "</td>" +
+                        "<td>" + flight.entitlement + "</td>" +
+                        "<td>" + flight.issue_date + "</td>" +
+                        "<td>" + flight.is_redeemed + "</td>" +
+                        "<td>" + flight.remarks + "</td>";
+                    rows += "<tbody><tr>" + eachRow + "</tr></tbody>";
+                }
+                $('#pax_voucher_data').append(rows);
+            } catch (error) {
+                $('#pax_voucher_data').find('tbody').remove();
+                $('#pax_voucher_data').append(
+                "<tbody><tr><tr><td  colspan=6>No vouchers found for this passenger</td></tr></tbody>");
+            }
+            if (ip == "http://127.0.0.1") {
+                port = "5003"
+                var passengerURL = ip + ":" + port + "/passenger-search/" + pid;
+            } else {
+                var passengerURL = ip + ":" + port + delaySystem + "/passenger/passenger-search/" + pid;
+            }
+            //passengerURL = "http://127.0.0.1:5003/passenger-search/"+pid
+            try {
+                const response =
+                await fetch(
+                passengerURL, { method: 'GET' , headers: {
+                'Authorization': token_type + ' ' + access_token,
+                'Content-Type': 'application/x-www-form-urlencoded'
+                 } });
+                const data = await response.json();
+                $('#pax_details').trigger("reset");
+                var info = {pid:data.pid,
+                        pnr:data.pnr,
+                        passport_number:data.passport_number,
+                        family_name:data.family_name,
+                        given_name:data.given_name,
+                        contact_number:data.contact_number,
+                        eticket_number:data.eticket_number,
+                        seat_number:data.seat_number,
+                        fare_class:data.fare_class,
+                        remarks:data.remarks};
+                $('#pax_details').populateForm(info);
+                $('#edit_passenger_form').populateForm(info);
+
+            } catch (error) {
+                $('#pax_details').hide();
+                alert("No passenger information found in system")
+            }
+            $('#loading_spinner_search').removeClass('spinner-border text-primary')
+        });
+    </script>
+    </div>
+</body>
+</html>

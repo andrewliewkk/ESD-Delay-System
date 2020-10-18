@@ -1,0 +1,1269 @@
+<!DOCTYPE html>
+<html lang="en">
+<!-- Publishable key: pk_test_7cypVsfppOBHXN39kROMae8p00qJjFm2QX
+    Secret key:      sk_test_UW031AKQAKbNym0mu9SITQAx00Ai4PhNOm -->
+<header Set-Cookie: cross-site-cookie=name; SameSite=None; Secure></header>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.7.4/css/bulma.min.css" /> -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css"
+        integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+
+    <script src="https://code.jquery.com/jquery-3.4.1.slim.min.js"
+        integrity="sha384-J6qa4849blE2+poT4WnyKhv5vZF5SrPo0iEjwBvKU7imGFAV0wwj1yYfoRSJoZ+n"
+        crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"
+        integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo"
+        crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js"
+        integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6"
+        crossorigin="anonymous"></script>
+
+    <link href="vendor/fontawesome-free/css/all.min.css" rel="stylesheet" type="text/css">
+    <script src="https://cdn.jsdelivr.net/npm/js-cookie@rc/dist/js.cookie.min.js"></script>
+
+    <link
+        href="https://fonts.googleapis.com/css?family=Nunito:200,200i,300,300i,400,400i,600,600i,700,700i,800,800i,900,900i"
+        rel="stylesheet">
+
+    <link href="index.css" rel="stylesheet">
+    <link rel="icon" href="image/logo.png" type="image/icon type">
+    <style>
+    .inputfile {
+    width: 0.1px;
+    height: 0.1px;
+    opacity: 0;
+    overflow: hidden;
+    position: absolute;
+    z-index: -1;
+}
+    #card-element{
+        width: 500px;
+        height: 100px;
+        background-color:white;
+        color: black;
+    }
+    </style>
+<style>
+    /**
+* The CSS shown here will not be introduced in the Quickstart guide, but shows
+* how you can use CSS to style your Element's container.
+*/
+    .StripeElement {
+    box-sizing: border-box;
+
+    height: 40px;
+
+    padding: 10px 12px;
+
+    border: 1px solid transparent;
+    border-radius: 4px;
+    background-color: white;
+
+    box-shadow: 0 1px 3px 0 #e6ebf1;
+    -webkit-transition: box-shadow 150ms ease;
+    transition: box-shadow 150ms ease;
+    }
+
+    .StripeElement--focus {
+    box-shadow: 0 1px 3px 0 #cfd7df;
+    }
+
+    .StripeElement--invalid {
+    border-color: #fa755a;
+    }
+
+    .StripeElement--webkit-autofill {
+    background-color: #fefde5 !important;
+    }
+</style>
+    <title>Delay System - Manager</title>
+
+</head>
+
+<body>
+    <script>
+        async function ipcheck(){
+            var url = window.location.href;
+            window.ip = url.split('/')[2].split(':')[0];
+            window.port = "8000"
+            window.delaySystem = "/delay-system"
+            console.log(ip)
+            if (ip == "" || ip == "localhost") {
+                window.ip = "http://127.0.0.1"
+                service_recovery_port = "5002"
+                passenger_port = "5003"
+                flight_port = "5001"
+                flight_status_port = "5004"
+                payment_port = "5005"
+            }
+            else{
+                window.ip = "http://" + ip
+            }
+            console.log(ip)
+        };
+        ipcheck()
+    </script>
+    <!-- Items needs for authentication -->
+    <div id="api_modal" class="modal fade" data-backdrop="static" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-login">
+            <div class="modal-content">
+                <form id="api_modal_form">
+                    <div class="modal-header">
+                        <h4 class="modal-title">Flight Staff Access</h4>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <div class="clearfix">
+                                <label>Username</label>
+                            </div>
+                            <input type="text" class="form-control" required="required" id='oauth-username'>
+                        </div>
+                        <div class="form-group">
+                            <div class="clearfix">
+                                <label>Password</label>
+                            </div>
+                            <input type="password" class="form-control" required="required" id='oauth-password'>
+                        </div>
+                        <div id="modal_api_msg">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <input type="submit" class="btn btn-primary pull-right" value="Login">
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <script>
+    async function api_check(){
+    try{
+        var bearer_token = Cookies.get('token');
+        if (bearer_token == null){
+            $('#api_modal').modal('show')
+            }
+            else{
+                if (ip == "http://127.0.0.1") {
+                    port = "5004"
+                    verifyURL = ip + ":" + port + "/flight-status/active-message";;
+                } else {
+                    verifyURL = ip + ":" + port + "/delay-system/manage/flight_status/flight-status/active-message";
+                }
+                window.token_type = Cookies.get('token_type');
+                window.access_token = Cookies.get('token');
+                const response =
+                    await fetch(
+                    verifyURL, { method: 'GET', headers: {
+                    'Authorization': token_type + ' ' + access_token,
+			        'Content-Type': 'application/x-www-form-urlencoded'
+                     } });
+                const data = await response.json();
+                if (response.status == 401){
+                    Cookies.remove('token');
+                    Cookies.remove('token_type');
+                    alert("Your credentials are not valid for access to this page, please login using a manager's account")
+                    location.reload()
+                }
+            }
+    }
+    catch(error){
+        alert(error)
+    }}
+    api_check()
+    </script>
+    <script>
+    $("#api_modal_form").submit(async (event) => {
+        event.preventDefault()
+        var client_id = $("#oauth-username").val()
+        var client_secret = $("#oauth-password").val()
+        var grant_type = "client_credentials"
+        var provision_key = "5XlzYHaMyaEtQZAub1EXIbKTdJI0bpYd"
+        if (ip == "http://127.0.0.1") {
+            port = "5004"
+            checkURL = "http://localhost:8000/oauth2/token"
+        } else {
+            checkURL = ip + ":8000/oauth2/token"
+        }
+
+        //var checkURL = "http://localhost:8000/oauth2/token"
+        var auth_request = 'grant_type=client_credentials&client_id=' + client_id + '&client_secret=' + client_secret
+        console.log(auth_request)
+        try {
+            const response = await fetch(
+            checkURL, { method: 'POST' ,headers: { 'Content-Type': 'application/x-www-form-urlencoded','X-Forwarded-Proto':'https' },
+            body: 'grant_type=client_credentials&client_id=' + client_id + '&client_secret=' + client_secret
+            });
+            const data = await response.json();
+            bearer_token = data.access_token;
+            token_type = data.token_type;
+            console.log(data)
+            if (response.status != 200){
+                alert('Authentication invalid, please try again')
+            }
+            else{
+                $('#api_modal').modal('hide');
+                Cookies.set('token',bearer_token);
+                window.bearer_token
+                console.log(bearer_token)
+                Cookies.set('token_type',token_type);
+                window.token_type
+                console.log(Cookies.get('token'));
+                location.reload()
+            }
+        } catch (error) {
+            alert(error)
+        }
+    })
+    </script>
+
+        <!-- Nav bar starts-->
+        <nav class="navbar navbar-expand-lg navbar-dark" style="background-color: #003678;">
+            <a class="navbar-brand" href="#"><img class="img-profile" src="image/logo.png"></a>
+            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
+                aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                <ul class="navbar-nav mr-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="index.html">Home </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="flight.html">Flight</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="service_recovery.html">Service Recovery</a>
+                    </li>
+                </ul>
+                <ui class="nav-item dropdown ml-auto">
+                    <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"> <span style="color:#fff;">Flight-Agent</span>
+                    <img class="img-profile rounded-circle" src="image/profile.png">
+                    </a>
+                    <div class="shadow-sm dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdownMenuLink">
+                        <a class="dropdown-item" href="#">Manage</a>
+                        <a class="dropdown-item" id='logout'>Log out</a>
+                    </div>
+                </ui>
+        </nav>
+        <script>
+            $("#logout").click((event)=>{
+                Cookies.remove('token');
+                Cookies.remove('token_type');
+                alert('Logout Successful!')
+                location.reload()
+            });
+        </script>
+        <!-- Navbar ends -->
+
+        <marquee behavior="scroll" direction="left" id="scroll_header">
+            Please login to use flight delay system!
+        </marquee>
+
+        <script>
+            $(document).ready(function(){
+                $(async() => {
+                    if (ip == "http://127.0.0.1") {
+                        port = "5004"
+                        scrollURL = ip + ":" + port + "/flight-status/active-message";
+                    } else {
+                        scrollURL = ip + ":" + port + delaySystem + "/manage/flight_status/flight-status/active-message";
+                    }
+                    //scrollURL = "http://127.0.0.1:5004/flight-status/active-message"
+                    try {
+                    const response =
+                        await fetch(
+                        scrollURL, { method: 'GET', headers: {
+                        'Authorization': token_type + ' ' + access_token,
+    			        'Content-Type': 'application/x-www-form-urlencoded'
+                         } });
+                        const data = await response.json();
+                        var message_data = data.message;
+                        if (message_data.length == 0) {
+                            $('#scroll_header').text('No message currently avaliable')
+                        }
+                        else {
+                            var full_msg = "";
+                            for (index = 0; index < message_data.length; index++){
+                                var msg = message_data[index];
+                                var main_msg = msg.message;
+                                var issuedatetime = msg.issue_datetime;
+                                var main_mid = msg.mid;
+                                var count = index + 1
+                                var temp = "     " + main_msg + " (Issued on: " + issuedatetime + ")         |         ";
+                                console.log(temp);
+                                full_msg = full_msg + temp;
+                            }
+                            $('#scroll_header').text(full_msg)
+                        }
+                    } catch (error) {
+                        $('#scroll_header').text('No message currently avaliable');
+                    }
+                })
+            });
+        </script>
+
+    <div class="jumbotron p-4" style="background-color: transparent;">
+
+        <h1 class="h3 p-2 text-gray-800">Management Dashboard</h1>
+        <!-- Delayed flight information -->
+        <button type="button" class="btn btn-primary" onclick="window.location.href = 'report.html';">Generate Reports</button>
+        <div id="accordion">
+            <div class="card shadow mb-4">
+                <div class="card-header" id="headingOne">
+                    <h5 class="mb-0">
+                        <a href data-toggle="collapse" data-target="#collapseOne"
+                            aria-expanded="true" aria-controls="collapseOne">
+                            Delayed Flight Details
+                        </a>
+                        <button type="button" data-toggle="modal" data-target="#delay_edit" class="btn btn-primary float-right" >Edit Delayed Flight</button>
+                        <div class="modal fade bd-example-modal-xl" tabindex="-1" role="dialog" id="delay_edit">
+                            <div class="modal-dialog modal-xl" role="document">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="exampleModalLabel">Edit Flight Status</h5>
+                                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                        <span aria-hidden="true">&times;</span>
+                                        </button>
+                                    </div>
+                                    <div class="modal-body">
+                                    <form id="modify_delayed_flight">
+                                        <div class="form-group">
+                                        <label for="auth_flight" class="col-form-label">Authentication Key</label>
+                                        <input type="text" class="form-control" id="auth_flight" ></input>
+                                        </div>
+                                    <table class="table table-borderless">
+                                    <tr>
+                                        <td>
+                                            <div class="form-group">
+                                                <label for="flight_no" class="col-form-label">Flight Number</label>
+                                                <input type="text" class="form-control" id="flight_no" required>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="form-group">
+                                                <label for="dep_apt" class="col-form-label">Departure Airport</label>
+                                                <input class="form-control" id="dep_apt" required>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="form-group">
+                                                <label for="arr_apt" class="col-form-label">Arrival Airport</label>
+                                                <input class="form-control" id="arr_apt" required>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="form-group">
+                                                <label for="status" class="col-form-label">Flight Status</label>
+                                                <input class="form-control" id="status" required>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <div class="form-group">
+                                                <label for="std" class="col-form-label">Stated Departure Time</label>
+                                                <input type="text" class="form-control" id="std" required>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="form-group">
+                                                <label for="sta" class="col-form-label">Stated Arrival Time</label>
+                                                <input class="form-control" id="sta" required>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="form-group">
+                                                <label for="etd" class="col-form-label">Estimated Depature Time</label>
+                                                <input class="form-control" id="etd" required>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="form-group">
+                                                <label for="eta" class="col-form-label">Estimated Arrival Time</label>
+                                                <input class="form-control" id="eta" required>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    </table>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                                        <button type="submit" class="btn btn-primary" id='current_flight_submit'>Make Changes</button>
+                                    </div>
+                                    </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </h5>
+                </div>
+
+                <div id="collapseOne" class="collapse show" aria-labelledby="headingOne" data-parent="#accordion">
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-striped" id="flight_info">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">Flight No.</th>
+                                        <th scope="col">Flight Routing</th>
+                                        <th scope="col">Stated Departure Time</th>
+                                        <th scope="col">Expected Departure Time</th>
+                                        <th scope="col">Stated Arrival Time</th>
+                                        <th scope="col">Expected Arrival Time</th>
+                                        <th scope="col">Flight Status</th>
+
+                                    </tr>
+                                </thead>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <script>
+        $("#modify_delayed_flight").submit(async (event) =>  {
+            event.preventDefault();
+            // Change serviceURL to your own
+            if (ip == "http://127.0.0.1") {
+                port = "5004"
+                serviceURL = ip + ":" + port + "/current_status/modify/";
+            } else {
+                serviceURL = ip + ":" + port + delaySystem + "/manage/flight_status/current_status/modify/";
+            }
+            //var serviceURL = "http://127.0.0.1:5004/current_status/modify/";
+            //obtain values from eligibility modal
+            var fid = $('#flight_no').val();
+            var dep_apt = $('#dep_apt').val();
+            var arr_apt = $('#arr_apt').val();
+            var status = $('#status').val();
+            var std = $('#std').val();
+            var sta = $('#sta').val();
+            var etd = $('#etd').val();
+            var eta = $('#eta').val();
+            serviceURL = serviceURL + fid
+
+            // try {
+                const response =
+                await fetch(
+                serviceURL, { method: 'POST',
+                headers: { 'Authorization': token_type + ' ' + access_token, "Content-Type": "application/json" },
+                body: JSON.stringify (
+                    {
+                        depart: dep_apt,
+                        arrive: arr_apt,
+                        std: std,
+                        etd: etd,
+                        sta: sta,
+                        eta: eta,
+                        status: status
+                    })}
+                );
+                const flight_delay_change = await response.json();
+                console.log(flight_delay_change)
+                if (response.ok) {
+                    console.log(flight_delay_change);
+                    alert("Delayed Flight " + fid + " details has been Successfuly modified");
+                }
+                // array or array.length are false
+                if (!response.ok) {
+                    alert('Flight not found or error making changes')
+                }
+        });
+
+        $(async() => {
+            if (ip == "http://127.0.0.1") {
+                port = "5004"
+                serviceURL = ip + ":" + port + "/checkflight";
+            } else {
+                serviceURL = ip + ":" + port + delaySystem + "/manage/flight_status/checkflight";
+            }
+            //var serviceURL = "http://127.0.0.1:5004/checkflight";
+            try {
+                const response =
+                await fetch(
+                serviceURL, { method: 'GET' , headers: {
+               'Authorization': token_type + ' ' + access_token,
+               'Content-Type': 'application/x-www-form-urlencoded'
+               }});
+                const data = await response.json();
+                var flight = data.message;
+                var rows = "";
+                eachRow =
+                    "<td>" + flight.fid + "</td>" +
+                    "<td>" + flight.depart + " TO " + flight.arrive + "</td>" +
+                    "<td>" + flight.std + "</td>" +
+                    "<td>" + flight.etd + "</td>" +
+                    "<td>" + flight.sta + "</td>" +
+                    "<td>" + flight.eta + "</td>" +
+                    "<td>" + flight.status + "</td>";
+                rows += "<tbody><tr>" + eachRow + "</tr></tbody>";
+                // add all the rows to the table
+                $('#flight_info').append(rows);
+            } catch (error) {
+                $('#flight_info').append(
+                "<tbody><tr><tr><td  colspan=7>No flight is found in the system</td></tr></tbody>");
+            }
+        });
+        </script>
+
+        <div class="card shadow mb-4">
+            <div class="card-header" id="headingTwo">
+                <h5 class="mb-0">
+                    <a href data-toggle="collapse" data-target="#collapseTwo"
+                            aria-expanded="true" aria-controls="collapseTwo">
+                        Flight Messages: Annoucements (Public)
+                    </a>
+                    <button type="button" data-toggle="modal" data-target="#flight_msg" class="btn btn-primary float-right" >Issue New Flight Annoucement</button>
+                    <div class="modal fade bd-example-modal-xl" tabindex="-1" role="dialog" id="flight_msg">
+                        <div class="modal-dialog modal-xl" role="document">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="exampleModalLabel">Issue New Flight Annoucement</h5>
+                                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                    </button>
+                                </div>
+                                <div class="modal-body">
+                                <form id="issueAnnouncement">
+                                    <div class="form-group">
+                                    <label for="auth_announce" class="col-form-label">Authentication Key</label>
+                                    <input type="text" class="form-control" id="auth_announce"></input>
+                                    </div>
+                                <div class="form-group">
+                                    <label for="annouce" class="col-form-label">Annoucement</label>
+                                    <textarea class="form-control" id="announce"></textarea>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                                    <button type="submit" class="btn btn-primary" id='annouce_submit'>Issue Annoucement</button>
+                                </div>
+                                </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </h5>
+            </div>
+
+            <div id="collapseTwo" class="collapse show" aria-labelledby="headingTwo" data-parent="#accordion">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped" id="annouce_info">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Annoucement No.</th>
+                                    <th scope="col">Message</th>
+                                    <th scope="col">Validity</th>
+                                    <th scope="col">Issue DateTime</th>
+                                    <th scope="col">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="annouce_info_tbody">
+
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+
+        <script>
+        $("#issueAnnouncement").submit(async (event) =>  {
+            event.preventDefault();
+            // Change serviceURL to your own
+            if (ip == "http://127.0.0.1") {
+                port = "5004"
+                serviceURL = ip + ":" + port + "/flight-status/new-message";
+            } else {
+                serviceURL = ip + ":" + port + delaySystem + "/manage/flight_status/flight-status/new-message";
+            }
+            //var serviceURL = "http://127.0.0.1:5004/flight-status/new-message";
+            var annoucement_text = $('#announce').val();
+            var authenticate_key = $('#auth_announce').val();
+            console.log(annoucement_text)
+
+            try {
+                const response =
+                await fetch(
+                serviceURL, { method: 'POST',
+                headers: { 'Authorization': token_type + ' ' + access_token, "Content-Type": "application/json" },
+                body: JSON.stringify (
+                    {
+                        message: annoucement_text,
+                        is_active: true
+                    })}
+            );
+            const newMessage = await response.json();
+
+            if (response.ok) {
+                console.log(newMessage);
+                alert("Announcement Successfully Created");
+                // window.location.href = "index.html";
+            }
+            // array or array.length are false
+            if (!response.ok) {
+                console.log("Error")
+            }
+            } catch (error) {
+                alert('There is a problem retrieving data, please try again later. --> '+error);
+            } // error
+        });
+
+        $(async() => {
+            if (ip == "http://127.0.0.1") {
+                port = "5004"
+                serviceURL = ip + ":" + port + "flight-status/active-message";
+            } else {
+                serviceURL = ip + ":" + port + delaySystem + "/manage/flight_status/flight-status/active-message";
+            }
+            //var serviceURL = "http://127.0.0.1:5004/flight-status/active-message";
+            try {
+                const response =
+                await fetch(
+                serviceURL, { method: 'GET', headers: {
+               'Authorization': token_type + ' ' + access_token,
+               'Content-Type': 'application/x-www-form-urlencoded'
+               }});
+                const data = await response.json();
+                var rows = "";
+                var message = data.message;
+                if (message.length == 0) {
+                    rows += "<td colspan='5'>No Annoucements found.</td>"
+                } else {
+                    for (const flight of message){
+                        eachRow = "";
+                        var clickfunction = " onclick='cancel_msg("+flight.mid+")'";
+                        var flight_validity = "&#10006"
+                        if (flight.is_active) {
+                            flight_validity = "&#10004"
+                        }
+                        eachRow +=
+                            "<tr><td>" + flight.mid + "</td>" +
+                            "<td>" + flight.message + "</td>" +
+                            "<td>" + flight_validity + "</td>" +
+                            "<td>" + flight.issue_datetime + "</td>" +
+                            "<td>" + "<button type='submit' class='btn btn-danger' id='annouce_submit'"  + clickfunction + ">Remove</button>" + "</td></tr>" ;
+                        $('#annouce_info_tbody').append(eachRow);
+                    }
+                }
+            } catch (error) {
+                $('#annouce_info').append(
+                "<tbody><tr><tr><td  colspan=5>No annoucements are currently found in the system</td></tr></tbody>");
+            }
+        });
+
+        async function cancel_msg(mid){
+            if (ip == "http://127.0.0.1") {
+                port = "5004"
+                serviceURL = ip + ":" + port + "/flight-status/cancel_message/"+mid;
+            } else {
+                serviceURL = ip + ":" + port + delaySystem + "/manage/flight_status/flight-status/cancel_message/"+mid;
+            }
+            //var serviceURL = "http://127.0.0.1:5004/flight-status/cancel_message/"+mid;
+            try {
+                const response =
+                await fetch(
+                    serviceURL, { method: 'GET' , headers: {
+                   'Authorization': token_type + ' ' + access_token,
+                   'Content-Type': 'application/x-www-form-urlencoded'
+                   }});
+                const status = await response.status
+                if (status == 200){
+                    alert("Successfully cancelled");
+                }
+                else{
+                    alert("Error in cancellation");
+                }
+            }
+            catch{
+                alert("Error in cancellation");
+            }
+        }
+        </script>
+        <!-- Delay Plan: Passenger Delay Entitlements -->
+        <div class="card mb-4 shadow">
+            <div class="card-header" style="background-color: #f8f9fc" ;>
+                Delay Plan: Passenger Delay Entitlements
+                <button type="button" data-toggle="modal" data-target="#voucher_edit" class="btn btn-primary float-right" >Edit Voucher Entitlements</button>
+            </div>
+            <div class="modal fade bd-example-modal-xl" tabindex="-1" role="dialog" id="voucher_edit">
+                <div class="modal-dialog modal-xl" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="exampleModalLabel">Edit Voucher Entitlements</h5>
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                        <div class="modal-body">
+                        <form id="edit_eligibility">
+                            <div class="form-group">
+                            <label for="auth_vouchers" class="col-form-label">Authentication Key</label>
+                            <input type="text" class="form-control" id="auth_vouchers"></input>
+                            </div>
+                        <div class="form-group">
+                            <label for="fare_class" class="col-form-label">Class of Travel</label>
+                            <select class="form-control" id="fare_class">
+                                <option>ECONOMY</option>
+                                <option>BUSINESS</option>
+                                <option>FIRST</option>
+                            </select>
+                        </div>
+                        <table class="table table-borderless">
+                        <tr>
+                            <td>
+                                    <div class="form-group">
+                                        <label for="hotel" class="col-form-label">Hotel Voucher</label>
+                                        <select class="form-control" id="hotel_option">
+                                            <option>Yes</option>
+                                            <option>No</option>
+                                        </select>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="form-group">
+                                    <label for="meal" class="col-form-label">Meal Voucher (Amount in $)</label>
+                                    <input class="form-control" id="meal_option" value="0" type="number">
+                                </div>
+                            </td>
+                            <td>
+                                <div class="form-group">
+                                    <label for="lounge" class="col-form-label">Lounge Voucher</label>
+                                    <select class="form-control" id="lounge_option">
+                                        <option>Yes</option>
+                                        <option>No</option>
+                                    </select>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="form-group">
+                                    <label for="transport" class="col-form-label">Transport Voucher</label>
+                                    <select class="form-control" id="transport">
+                                        <option>Yes</option>
+                                        <option>No</option>
+                                    </select>
+                                </div>
+                            </td>
+                        </tr>
+                        </table>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                            <button type="submit" class="btn btn-primary" id='current_flight_submit'>Make Changes</button>
+                        </div>
+                        </form>
+                        <label id="success_modify" style="color: green; font-weight: 600; text-align: center;"></label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Fare Class Tabs -->
+
+            <ul class="nav nav-tabs mt-3" id="myTab" role="tablist">
+                <li class="nav-item">
+                    <a class="nav-link active" id="economy-tab" data-toggle="tab" href="#economy" role="tab"
+                        aria-controls="economy" aria-selected="true">Economy Class</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="business-tab" data-toggle="tab" href="#business" role="tab"
+                        aria-controls="business" aria-selected="false">Business Class</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="first-tab" data-toggle="tab" href="#first" role="tab"
+                        aria-controls="first" aria-selected="false">First Class</a>
+                </li>
+            </ul>
+
+            <!-- Economy Class Eligibility -->
+
+            <div class="tab-content" id="myTabContent">
+                <div class="tab-pane fade show active" id="economy" role="tabpanel" aria-labelledby="economy-tab">
+                    <div class="card mb-4">
+                        <div class="card-body">
+                            <h5 class="card-title">Economy / Premium Economy Class Passenger Entitlements</h5>
+                            <table class="table table-striped" id='economy_data'>
+                                <thead>
+                                    <tr>
+                                        <th scope="col">Hotel Vouchers</th>
+                                        <th scope="col">Meal Vouchers (Amount)</th>
+                                        <th scope="col">Lounge Vouchers</th>
+                                        <th scope="col">Transport Vouchers</th>
+                                        <th scope="col">Last Updated</th>
+                                    </tr>
+                                </thead>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <!-- Business Class Eligibility -->
+
+                <div class="tab-pane fade" id="business" role="tabpanel" aria-labelledby="business-tab">
+                    <div class="card mb-4">
+                        <div class="card-body">
+                            <h5 class="card-title">Business Class Passenger Entitlements</h5>
+                            <table class="table table-striped" id='business_data'>
+                                <thead>
+                                    <tr>
+                                        <th scope="col">Hotel Vouchers</th>
+                                        <th scope="col">Meal Vouchers (Amount)</th>
+                                        <th scope="col">Lounge Vouchers</th>
+                                        <th scope="col">Transport Vouchers</th>
+                                        <th scope="col">Last Updated</th>
+                                    </tr>
+                                </thead>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- First Class Eligibility -->
+                <div class="tab-pane fade" id="first" role="tabpanel" aria-labelledby="first-tab">
+                    <div class="card mb-4">
+                        <div class="card-body">
+                            <h5 class="card-title">First / Suites Class Passenger Entitlements</h5>
+                            <table class="table table-striped" id='first_data'>
+                                <thead>
+                                    <tr>
+                                        <th scope="col">Hotel Vouchers</th>
+                                        <th scope="col">Meal Vouchers (Amount)</th>
+                                        <th scope="col">Lounge Vouchers</th>
+                                        <th scope="col">Transport Vouchers</th>
+                                        <th scope="col">Last Updated</th>
+                                    </tr>
+                                </thead>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <script>
+                $("#edit_eligibility").submit(async (event) =>  {
+                    event.preventDefault();
+                    // Change serviceURL to your own
+                    if (ip == "http://127.0.0.1") {
+                        port = "5002"
+                        serviceURL = ip + ":" + port + "/eligibility/edit/";
+                    } else {
+                        serviceURL = ip + ":" + port + delaySystem + "/manage/service_recovery/eligibility/edit/";
+                    }
+                    //var serviceURL = "http://127.0.0.1:5002/eligibility/edit/";
+                    //obtain values from eligibility modal
+                    var fare_class = $('#fare_class').val();
+                    var h_eligibility = $('#hotel_option').val();
+                    var m_amount = $('#meal_option').val();
+                    var l_eligibility = $('#lounge_option').val();
+                    var t_eligibility = $('#transport_option').val();
+                    serviceURL = serviceURL + fare_class
+                    var h_option = true;
+                    var l_option = true;
+                    var t_option = true;
+
+                    if (h_eligibility == "No") {
+                        h_option = false
+                    }
+                    if (l_eligibility == "No") {
+                        l_option = false
+                    }
+                    if (t_eligibility == "No") {
+                        t_option = false
+                    }
+
+                    try {
+                        const response =
+                        await fetch(
+                        serviceURL, { method: 'POST',
+                        headers: { 'Authorization': token_type + ' ' + access_token,"Content-Type": "application/json" },
+                        body: JSON.stringify (
+                            {
+                                hotel_voucher: h_option,
+                                meal_voucher: m_amount,
+                                lounge_voucher: l_option,
+                                transport_voucher: t_option
+                            })}
+                    );
+                    const eligibility_change = await response.json();
+
+                    if (response.ok) {
+                        console.log(eligibility_change);
+                        alert(fare_class + " Class Eligibility Successfully Modified");
+                    }
+                    if (!response.ok) {
+                        showError('Error')
+                    }
+
+                    } catch (error) {
+                        console.log("Please try to modify the eligibility again later");
+
+                    } // error
+
+                });
+
+                $(async() => {
+                    if (ip == "http://127.0.0.1") {
+                        port = "5002"
+                        serviceURL = ip + ":" + port + "/eligibility";
+                    } else {
+                        serviceURL = ip + ":" + port + delaySystem + "/manage/service_recovery/eligibility";
+                    }
+                    //var serviceURL = "http://127.0.0.1:5002/eligibility";
+                    try {
+                        const response =
+                        await fetch(
+                        serviceURL, { method: 'GET', headers: {
+                       'Authorization': token_type + ' ' + access_token,
+                       'Content-Type': 'application/x-www-form-urlencoded'
+                       }});
+                        const data = await response.json();
+                        console.log(data)
+                        var eligible = data.Eligibility; //the arr is in data.books of the JSON data
+                        for (const item of eligible){
+                            var hotel_eligibility = "&#10006"
+                            var meal_eligibility = item.meal_voucher
+                            var lounge_eligibility = "&#10006"
+                            var transport_eligibility = "&#10006"
+                            if (item.hotel_voucher) {
+                                var hotel_eligibility = "&#10004"
+                            }
+                            if (item.lounge_voucher) {
+                                var lounge_eligibility = "&#10004"
+                            }
+                            if (item.transport_voucher) {
+                                var transport_eligibility = "&#10004"
+                            }
+                            // if (item.hotel_voucher == false)
+                            eachRow = "<td>" + hotel_eligibility + "</td>" +
+                                "<td>$" + meal_eligibility + "</td>" +
+                                "<td>" + lounge_eligibility + "</td>" +
+                                "<td>" + transport_eligibility + "</td>" +
+                                "<td>" + item.update_datetime + "</td>";
+                            var rows = "";
+                            rows += "<tbody><tr>" + eachRow + "</tr></tbody>";
+                            if (item.fare_class.toUpperCase() == 'ECONOMY'){
+                                $('#economy_data').append(rows);
+                            }
+                            if (item.fare_class.toUpperCase() == 'BUSINESS'){
+                                $('#business_data').append(rows);
+                            }
+                            if (item.fare_class.toUpperCase() == 'FIRST'){
+                                $('#first_data').append(rows);
+                            }
+                        }
+                    } catch (error) {
+                        $('#economy_data').append(
+                        "<tbody><tr><tr><td  colspan=5>No entitlement information found in the system</td></tr></tbody>");
+                        $('#business_data').append(
+                        "<tbody><tr><tr><td  colspan=5>No entitlement information found in the system</td></tr></tbody>");
+                        $('#first_data').append(
+                        "<tbody><tr><tr><td  colspan=5>No entitlement information found in the system</td></tr></tbody>");
+                    }
+                });
+                </script>
+            </div>
+        </div>
+        <!-- PAYMENT -->
+        <div class="card shadow mb-4">
+            <div class="card-header" id="headingTwo">
+                <h5 class="mb-0">
+                        Download Hotel Payments
+                    <button type="button" id="get_payments" class="btn btn-info float-right" >Download Payments To CSV</button>
+                </h5>
+            </div>
+            <hr>
+            <div class="card-header" id="headingTwo">
+                <h5 class="mb-0">
+                        Settle Payments from CSV
+                        <button type="button" data-toggle="modal" data-target="#paymodal" class="btn btn-info float-right">Make Payment</button>
+                    </h5>
+                    <br>
+                </div>
+
+                    <script src="https://checkout.stripe.com/checkout.js"></script>
+
+                    <!-- <form action="http://127.0.0.1:5005/charge" method="post" >
+                        <script
+                            src="https://checkout.stripe.com/checkout.js" class="stripe-button"
+                            data-key="pk_test_7cypVsfppOBHXN39kROMae8p00qJjFm2QX"
+
+                            data-name="Hotel Payment"
+                            data-description="Hotel MBS"
+                            data-image="https://mumbrella.com.au/wp-content/uploads/2014/11/Singapore_airlines_logo-1.jpg"
+                            data-locale="auto"
+                            >
+
+                        </script> -->
+                        <div class="modal fade" id="pay_process" tabindex="-1" role="dialog" aria-labelledby="pay_processLabel" aria-hidden="true">
+
+                            <div class="modal-dialog modal-dialog-centered" role="document">
+
+                                <div class="modal-content">
+                                <div class="modal-header">
+                                <h5 class="modal-title" id="pay_processLabel" style="font-weight: 800; color: black;"><label for="card-element">
+                                    Credit or debit card
+                                </label></h5>
+                                    <div class="modal-body">
+                                    <div class="form-row" style="width: 30">
+                                        Payment is being Processed...please wait
+                                    </div>
+                                    </div>
+                            </div>
+
+                            </div>
+                        </div>
+                        </div>
+
+                        <div class="modal fade" id="paymodal" tabindex="-1" role="dialog" aria-labelledby="paymodalLabel" aria-hidden="true">
+
+                            <div class="modal-dialog modal-dialog-centered" role="document">
+
+                                <div class="modal-content">
+                                <div class="modal-header">
+                                <h5 class="modal-title" id="paymodalLabel" style="font-weight: 800; color: black;"><label for="card-element">
+                                    Credit or debit card
+                                </label></h5>
+                                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                                </div>
+                                <script src="https://js.stripe.com/v3/"></script>
+                                <form action="http://192.168.43.187:8000/delay-system/payment/charge" method="post" form id="payment-form" onsubmit='return false'>
+                                    <div class="modal-body">
+                                    <div class="form-row" style="width: 30">
+
+                                        <div id="card-element" align='center'>
+                                        <!-- A Stripe Element will be inserted here. -->
+                                        </div>
+                                        <!-- Used to display form errors. -->
+                                        <div id="card-errors" role="alert"></div>
+                                    </div>
+                                    <div>
+                                        <br>
+                                        <input type="file" id='input_file' required><br>
+                                        <br><button type="submit" class="btn btn-info" >Process Payments</button>
+                                        <input type='hidden' id='total_amount' value=''>
+                                    </div>
+                                </form>
+                            </div>
+                            </div>
+
+                            </div>
+
+                        </div>
+                </h5>
+            </div>
+
+        </div>
+
+
+        <script>
+            function JSON2CSV(objArray) {
+                var array = [["HotelID","VoucherID","Amount"]];
+                array.push(typeof objArray != 'object' ? JSON.parse(objArray) : objArray);
+                alert(array)
+                var str = '';
+                var line = '';
+                // if ($("#labels").is(':checked')) {
+                var head = array[0];
+                if ($("#quote").is(':checked')) {
+                    for (var index in head) {
+                        var value = head[index] + "";
+                        line += '"' + value.replace(/"/g, '""') + '",';
+                    }
+                } else {
+                    for (var index in head) {
+                        line += head[index] + ',';
+                    }
+                }
+
+                line = line.slice(0, -1);
+                str += line + '\r\n';
+                // }
+                console.log("FIRST: " + str)
+                for (var i = 0; i < array[1].length; i++) {
+                    var line = '';
+                    console.log(array[1][i])
+                    console.log("-----------")
+                    if ($("#quote").is(':checked')) {
+                        for (var index in array[1][i]) {
+                            var value = array[1][i][index] + "";
+                            line += '"' + value.replace(/"/g, '""') + '",';
+                        }
+                    } else {
+                        for (var index in array[1][i]) {
+                            line += array[1][i][index] + ',';
+                        }
+                    }
+                    console.log(":::" + line)
+                    line = line.slice(0, -1) + '\r\n';
+                    str += line;
+                    console.log(str)
+                }
+                return str;
+            }
+
+            var stripe = Stripe('pk_test_7cypVsfppOBHXN39kROMae8p00qJjFm2QX');
+            // Create an instance of Elements.
+            var elements = stripe.elements();
+
+            var card = elements.create('card');
+
+            // Add an instance of the card Element into the `card-element` <div>.
+            card.mount('#card-element');
+
+            // Handle real-time validation errors from the card Element.
+            card.addEventListener('change', function (event) {
+            var displayError = document.getElementById('card-errors');
+            if (event.error) {
+                displayError.textContent = event.error.message;
+            } else {
+                displayError.textContent = '';
+            }
+            });
+
+            //handle form submission
+            var form = document.getElementById('payment-form');
+
+            form.addEventListener('submit', function (event) {
+
+                event.preventDefault();
+                const input = document.querySelector('input[type="file"]')
+                const reader = new FileReader();
+                var toPush = [];
+                reader.onload = function () {
+                    const lines = reader.result.split('\n').map(function (line) {
+                        return line.split(',');
+                    })
+                    var total_amount = 0
+                    for (let i = 1; i < lines.length - 1; i++) {
+                        var content = lines[i];
+                        var hotelID= content[0];
+                        var voucherID = content[1];
+                        var amount = parseFloat(content[2]);
+                        total_amount += amount
+                        toPush.push({"hotelID":hotelID, "voucherID":voucherID, "amount":amount});
+
+                    }
+
+
+                    //total_amount = toString(total_amount);
+                    $('#total_amount').val(total_amount);
+                }
+
+                reader.readAsText(input.files[0]);
+                stripe.createToken(card).then(function (result) {
+
+                    if (result.error) {
+                    // Inform the user if there was an error.
+                    var errorElement = document.getElementById('card-errors');
+                    errorElement.textContent = result.error.message;
+                    } else {
+                        stripeTokenHandler(result.token);
+                    }
+                });
+            });
+
+            function stripeTokenHandler(token) {
+
+                // Insert the token ID into the form so it gets submitted to the server
+                var form = document.getElementById('payment-form');
+                var hiddenInput = document.createElement('input');
+                hiddenInput.setAttribute('type', 'hidden');
+                hiddenInput.setAttribute('name', 'stripeToken');
+                hiddenInput.setAttribute('value', token.id);
+                form.appendChild(hiddenInput);
+
+
+                const input = document.querySelector('input[type="file"]')
+                const reader = new FileReader();
+                var toPush = [];
+
+                reader.onload = function () {
+                    const lines = reader.result.split('\n').map(function (line) {
+                        return line.split(',');
+                    })
+                    var total_amount = 0
+                    for (let i = 1; i < lines.length - 1; i++) {
+                        var content = lines[i];
+                        var hotelID= content[0];
+                        var voucherID = content[1];
+                        var amount = content[2];
+
+                        total_amount = amount // can't work
+                        toPush.push({"hotelID":hotelID, "voucherID":voucherID, "amount":amount});
+                    }
+                }
+                var total_amount = $('#total_amount').val();
+                console.log(total_amount);
+                // insert total amount
+                var form = document.getElementById('payment-form');
+                var hiddenInput = document.createElement('input');
+                hiddenInput.setAttribute('type', 'hidden');
+                hiddenInput.setAttribute('name', 'total_amount');
+                hiddenInput.setAttribute('value', total_amount);
+                form.appendChild(hiddenInput);
+
+    // Submit the form
+    form.submit();
+    }
+
+    $('#payment-form').submit(async(event) => {
+        event.preventDefault;
+        console.log()
+        // $("#pay_process").modal();
+        // setTimeout(function(){
+        //     $("#pay_process").close();
+        // }, 10000);
+
+        alert("Payment is being processed...please wait");
+        // $("#prospects_form").submit(function(e) {
+        //     e.preventDefault();
+        // });
+        // window.setTimeout(function () {
+        // location.href = "manager.html";
+        // }, 1000);
+    })
+
+
+    $("#get_payments").click(async (event) =>  {
+                if (ip == "http://127.0.0.1") {
+                    port = "5005"
+                    serviceURL = ip + ":" + port + "/get-payments";
+                } else {
+                    serviceURL = ip + ":" + port + delaySystem + "/payment/get-payments";
+                }
+                //serviceURL = "http://127.0.0.1:5005/get-payments"
+                try {
+                    const response =
+                    await fetch(
+                    serviceURL, { method: 'GET', headers: {
+                   'Authorization': token_type + ' ' + access_token,
+                   'Content-Type': 'application/x-www-form-urlencoded'
+                   }});
+                    var data = await response.json();
+                    console.log(data);
+                    if (response.ok) {
+                        if (data.vouchers.length > 0) {
+                            jsonObject = JSON.stringify(data.vouchers)
+                            console.log(jsonObject)
+                            var csv = JSON2CSV(jsonObject)
+                            var downloadLink = document.createElement("a");
+                            var blob = new Blob(["\ufeff", csv]);
+                            var url = URL.createObjectURL(blob);
+                            downloadLink.href = url;
+                            downloadLink.download = "data.csv";
+                            document.body.appendChild(downloadLink);
+                            downloadLink.click();
+                            document.body.removeChild(downloadLink);
+                        } else {
+                            alert("No pending payments.");
+                        }
+                    }
+                } catch (error) {
+
+                }
+    });
+        </script>
+    </div>
+</body>
+</html>

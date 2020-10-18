@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css"
+        integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+
+    <script src="https://code.jquery.com/jquery-3.4.1.slim.min.js"
+        integrity="sha384-J6qa4849blE2+poT4WnyKhv5vZF5SrPo0iEjwBvKU7imGFAV0wwj1yYfoRSJoZ+n"
+        crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"
+        integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo"
+        crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js"
+        integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6"
+        crossorigin="anonymous"></script>
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.20/css/jquery.dataTables.min.css" />
+    <script src="https://cdn.datatables.net/1.10.20/js/jquery.dataTables.min.js"></script>
+    <link href="vendor/fontawesome-free/css/all.min.css" rel="stylesheet" type="text/css">
+    <link
+        href="https://fonts.googleapis.com/css?family=Nunito:200,200i,300,300i,400,400i,600,600i,700,700i,800,800i,900,900i"
+        rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/js-cookie@rc/dist/js.cookie.min.js"></script>
+    <link href="index.css" rel="stylesheet">
+    <link rel="icon" href="image/logo.png" type="image/icon type">
+    <title>Delay System - Reports</title>
+</head>
+
+<body>
+    <script>
+        $(async() => {
+            var url = window.location.href;
+            window.ip = url.split('/')[2].split(':')[0];
+            window.port = "8000"
+            window.delaySystem = "/delay-system"
+            console.log(ip)
+            if (ip == "" || ip == "localhost") {
+                window.ip = "http://127.0.0.1"
+                service_recovery_port = "5002"
+                passenger_port = "5003"
+                flight_port = "5001"
+                flight_status_port = "5004"
+                payment_port = "5005"
+            }
+            else{
+                window.ip = "http://" + ip
+            }
+            console.log(ip)
+        });
+    </script>
+    <!-- Items needs for authentication-->
+    <div id="api_modal" class="modal fade" data-backdrop="static" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-login">
+            <div class="modal-content">
+                <form id="api_modal_form">
+                    <div class="modal-header">
+                        <h4 class="modal-title">Flight Staff Access</h4>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <div class="clearfix">
+                                <label>Username</label>
+                            </div>
+                            <input type="text" class="form-control" required="required" id='oauth-username'>
+                        </div>
+                        <div class="form-group">
+                            <div class="clearfix">
+                                <label>Password</label>
+                            </div>
+                            <input type="password" class="form-control" required="required" id='oauth-password'>
+                        </div>
+                        <div id="modal_api_msg">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <input type="submit" class="btn btn-primary pull-right" value="Login">
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <script>
+    function api_check(){
+    try{
+        var bearer_token = Cookies.get('token');
+        if (bearer_token == null){
+            $('#api_modal').modal('show')
+            }
+            else{
+                window.token_type = Cookies.get('token_type');
+                window.access_token = Cookies.get('token');
+                console.log(access_token)
+            }
+    }
+    catch(error){
+        alert(error)
+    }}
+    api_check()
+    </script>
+    <script>
+    $("#api_modal_form").submit(async (event) => {
+        event.preventDefault()
+        var client_id = $("#oauth-username").val()
+        var client_secret = $("#oauth-password").val()
+        var grant_type = "client_credentials"
+        var provision_key = "5XlzYHaMyaEtQZAub1EXIbKTdJI0bpYd"
+        if (ip == "http://127.0.0.1") {
+            port = "5004"
+            checkURL = "http://localhost:8000/oauth2/token";
+        } else {
+            checkURL = ip + ":8000/oauth2/token";
+        }
+        //var checkURL = "http://localhost:8000/oauth2/token"
+        var auth_request = 'grant_type=client_credentials&client_id=' + client_id + '&client_secret=' + client_secret
+        console.log(auth_request)
+        try {
+            const response = await fetch(
+            checkURL, { method: 'POST' ,headers: { 'Content-Type': 'application/x-www-form-urlencoded','X-Forwarded-Proto':'https' },
+            body: 'grant_type=client_credentials&client_id=' + client_id + '&client_secret=' + client_secret
+            });
+            const data = await response.json();
+            bearer_token = data.access_token;
+            token_type = data.token_type;
+            console.log(data)
+            if (response.status != 200){
+                alert('Authentication invalid, please try again')
+            }
+            else{
+                $('#api_modal').modal('hide');
+                Cookies.set('token',bearer_token);
+                window.bearer_token
+                console.log(bearer_token)
+                Cookies.set('token_type',token_type);
+                window.token_type
+                console.log(Cookies.get('token'));
+                location.reload()
+            }
+        } catch (error) {
+            alert(error)
+        }
+    })
+    </script>
+
+<!-- Nav bar starts-->
+
+<nav class="navbar navbar-expand-lg navbar-dark" style="background-color: #003678;">
+    <a class="navbar-brand" href="#"><img class="img-profile" src="image/logo.png"></a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
+        aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <ul class="navbar-nav mr-auto">
+            <li class="nav-item active">
+                <a class="nav-link" href="index.html">Home <span class="sr-only">(current)</span></a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="flight.html">Flight</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="service_recovery.html">Service Recovery</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="scanner.html">Scan</a>
+            </li>
+        </ul>
+        <ui class="nav-item dropdown ml-auto">
+            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"> <span style="color:#fff;">Flight-Agent</span>
+            <img class="img-profile rounded-circle" src="image/profile.png">
+            </a>
+            <div class="shadow-sm dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdownMenuLink">
+                <a class="dropdown-item" href="manager.html">Manage</a>
+                <a class="dropdown-item" id='logout'>Log out</a>
+            </div>
+        </ui>
+</nav>
+<script>
+    $("#logout").click((event)=>{
+        Cookies.remove('token');
+        Cookies.remove('token_type');
+        alert('Logout Successful!')
+        location.reload()
+    });
+</script>
+<!-- Navbar ends -->
+
+<marquee behavior="scroll" direction="left" id="scroll_header">
+    Please login to use flight delay system!
+</marquee>
+
+<script>
+    $(document).ready(function(){
+        $(async() => {
+            if (ip == "http://127.0.0.1") {
+                port = "5004"
+                scrollURL = ip + ":" + port + "/flight-status/active-message";
+            } else {
+                scrollURL = ip + ":" + port + delaySystem + "/flight_status/flight-status/active-message";
+            }
+            //scrollURL = "http://127.0.0.1:5004/flight-status/active-message"
+            try {
+            const response =
+                await fetch(
+                scrollURL, { method: 'GET', headers: {
+                'Authorization': token_type + ' ' + access_token,
+                'Content-Type': 'application/x-www-form-urlencoded'
+                 } });
+                const data = await response.json();
+                var message_data = data.message;
+                if (message_data.length == 0) {
+                    $('#scroll_header').text('No message currently avaliable')
+                }
+                else {
+                    var full_msg = "";
+                    for (index = 0; index < message_data.length; index++){
+                        var msg = message_data[index];
+                        var main_msg = msg.message;
+                        var issuedatetime = msg.issue_datetime;
+                        var main_mid = msg.mid;
+                        var count = index + 1
+                        var temp = "     " + main_msg + " (Issued on: " + issuedatetime + ")         |         ";
+                        console.log(temp);
+                        full_msg = full_msg + temp;
+                    }
+                    $('#scroll_header').text(full_msg)
+                }
+            } catch (error) {
+                $('#scroll_header').text('No message currently avaliable');
+            }
+        })
+    });
+</script>
+
+
+    <div class="jumbotron p-4" style="background-color: transparent;">
+
+        <h1 class="h3 p-2 text-gray-800">Report Dashboard</h1>
+        <!-- Delayed flight information -->
+
+        <div id="accordion">
+            <div class="card shadow mb-4">
+                <div class="card-header" id="headingOne">
+                    <h5 class="mb-0">
+                        <a href data-toggle="collapse" data-target="#collapseOne"
+                            aria-expanded="true" aria-controls="collapseOne">
+                            Booked Flights
+                        </a>
+                        <button type="button" data-toggle="modal" id='all_booked_flights' class="btn btn-primary float-right" >View all Booked Flights</button>
+                    </h5>
+                </div>
+
+                <div id="collapseOne" class="collapse show" aria-labelledby="headingOne" data-parent="#accordion">
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-striped" id="flight_info">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">Passenger ID</th>
+                                        <th scope="col">Flight Number</th>
+                                        <th scope="col">Departure Airport</th>
+                                        <th scope="col">Departure Date</th>
+                                        <th scope="col">Departure Time</th>
+                                        <th scope="col">Arrival Airport</th>
+                                        <th scope="col">Arrival Date</th>
+                                        <th scope="col">Arrival Time</th>
+                                        <th scope="col">Airline</th>
+                                        <th scope="col">Fare Class</th>
+                                        <th scope="col">Ticket Status</th>
+                                        <th scope="col">Remarks</th>
+
+                                    </tr>
+                                </thead>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <script>
+        $("#all_booked_flights").click(async(event) => {
+            event.preventDefault();
+            if (ip == "http://127.0.0.1") {
+                port = "5001"
+                serviceURL = ip + ":" + port + "/flight-records/search_booked_flights";
+            } else {
+                serviceURL = ip + ":" + port + delaySystem + "/flight/flight-records/search_booked_flights";
+            }
+            //var serviceURL = "http://127.0.0.1:5001/flight-records/search_booked_flights";
+            try {
+                const response =
+                 await fetch(
+                   serviceURL, { method: 'GET', headers: {
+                   'Authorization': token_type + ' ' + access_token,
+                   'Content-Type': 'application/x-www-form-urlencoded'
+                    } });
+                $('#flight_info').find('tbody').remove();
+                const data = await response.json();
+                var flight_records = data.message;
+                var rows = "";
+                for (const flight of flight_records){
+                eachRow =
+                    "<td>" + flight.pid + "</td>" +
+                    "<td>" + flight.fid + "</td>" +
+                    "<td>" + flight.departure_airport + "</td>" +
+                    "<td>" + flight.departure_date + "</td>" +
+                    "<td>" + flight.departure_time + "</td>" +
+                    "<td>" + flight.arrival_airport + "</td>" +
+                    "<td>" + flight.arrival_date + "</td>" +
+                    "<td>" + flight.arrival_time + "</td>" +
+                    "<td>" + flight.airline + "</td>" +
+                    "<td>" + flight.fare_class + "</td>" +
+                    "<td>" + flight.ticket_status + "</td>" +
+                    "<td>" + flight.remarks + "</td>";
+                rows += eachRow
+                }
+
+                printRows = "<tbody><tr>" + rows + "</tr></tbody>";
+                // add all the rows to the table
+                $('#flight_info').append(printRows);
+                $('#flight_info').DataTable();
+            } catch (error) {
+                $('#flight_info').find('tbody').remove();
+                $('#flight_info').append(
+                "<tbody><tr><tr><td  colspan=12>No flight is found in the system</td></tr></tbody>");
+              }
+          });
+        </script>
+
+        <div class="card shadow mb-4">
+            <div class="card-header" id="headingTwo">
+                <h5 class="mb-0">
+                    <a href data-toggle="collapse" data-target="#collapseTwo"
+                            aria-expanded="true" aria-controls="collapseTwo">
+                        Vouchers Issued
+                    </a>
+                    <button type="button" class="btn btn-primary float-right" id="all_vouchers" >View all vouchers</button>
+                </h5>
+            </div>
+
+            <div id="collapseTwo" class="collapse show" aria-labelledby="headingTwo" data-parent="#accordion">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped" id="all_vouchers_table">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Passenger ID</th>
+                                    <th scope="col">Voucher ID</th>
+                                    <th scope="col">Voucher Type</th>
+                                    <th scope="col">Issue Date</th>
+                                    <th scope="col">Entitlement</th>
+                                    <th scope="col">Validity</th>
+                                    <th scope="col">Remarks</th>
+                                </tr>
+                            </thead>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <script>
+        $("#all_vouchers").click(async(event) => {
+            event.preventDefault();
+            //var serviceURL = "http://127.0.0.1:5002/service-vouchers";
+            if (ip == "http://127.0.0.1") {
+                port = "5004"
+                serviceURL = ip + ":" + port + "/service-vouchers";
+            } else {
+                serviceURL = ip + ":" + port + delaySystem + "/service_recovery/service-vouchers";
+            }
+            try {
+                const response =
+                 await fetch(
+                   serviceURL, { method: 'GET', headers: {
+                   'Authorization': token_type + ' ' + access_token,
+                   'Content-Type': 'application/x-www-form-urlencoded'
+                    } });
+                const data = await response.json();
+                var pax_vouchers = data.vouchers;
+                var rows = "";
+                $('#all_vouchers_table').find('tbody').remove();
+                if (pax_vouchers.length == 0) {
+                    $('#all_vouchers_tables').find('tbody').remove();
+                    $('#all_vouchers_table').append(
+                    "<tbody><tr><tr><td  colspan=7>No vouchers found in the system</td></tr></tbody>");
+                }
+                for (const pax_voucher of pax_vouchers) {
+                    var voucher_status = "Unredeemed";
+                    if (pax_voucher.is_redeemed == true) {
+                        voucher_status = "Redeemed"
+                    }
+                    var issueDate = pax_voucher.issue_date;
+                    eachRow =
+                        "<td>" + pax_voucher.pid + "</td>" +
+                        "<td>" + pax_voucher.vid + "</td>" +
+                        "<td>" + pax_voucher.voucher_type  + "</td>" +
+                        "<td>" + issueDate.substring(0, issueDate.length - 13) + "</td>" +
+                        "<td>" + pax_voucher.entitlement + "</td>" +
+                        "<td>" + voucher_status + "</td>" +
+                        "<td>" + pax_voucher.remarks + "</td>";
+                    rows += "<tbody><tr>" + eachRow + "</tr></tbody>";
+                }
+
+                printRows = "<tbody><tr>" + rows + "</tr></tbody>";
+                // add all the rows to the table
+                $('#all_vouchers_table').append(printRows);
+                //$('#all_vouchers_table').DataTable();
+            } catch (error) {
+                console.log(error)
+                $('#all_vouchers_table').find('tbody').remove();
+                $('#all_vouchers_table').append(
+                "<tbody><tr><tr><td  colspan=7>No vouchers found in the system</td></tr></tbody>");
+              }
+          });
+        </script>
+        <!-- Passenger details -->
+
+        <div class="card shadow mb-4">
+            <div class="card-header" id="headingThree">
+                <h5 class="mb-0">
+                    <a href data-toggle="collapse" data-target="#collapseThree"
+                            aria-expanded="true" aria-controls="collapseThree">
+                    Affected Passengers
+                    </a>
+                    <button type="button" class="btn btn-primary float-right" id="all_passengers" >View all passengers</button>
+                </h3>
+            </div>
+
+            <div id="collapseThree" class="collapse show" aria-labelledby="headingThree" data-parent="#accordion">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped" id="all_passengers_table">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Passenger ID</th>
+                                    <th scope="col">PNR</th>
+                                    <th scope="col">Passport Number</th>
+                                    <th scope="col">Family Name</th>
+                                    <th scope="col">Given Name</th>
+                                    <th scope="col">Contact Number</th>
+                                    <th scope="col">eTicket</th>
+                                    <th scope="col">Seat</th>
+                                    <th scope="col">Fare Class</th>
+                                    <th scope="col">Remarks</th>
+                                </tr>
+                            </thead>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <script>
+        $("#all_passengers").click(async(event) => {
+            event.preventDefault();
+            if (ip == "http://127.0.0.1") {
+                port = "5003"
+                scrollURL = ip + ":" + port + "/passenger-all";
+            } else {
+                scrollURL = ip + ":" + port + delaySystem + "/passenger/passenger-all";
+            }
+            //var serviceURL = "http://127.0.0.1:5003/passenger";
+            try {
+                const response =
+                 await fetch(
+                   serviceURL, { method: 'GET', headers: {
+                   'Authorization': token_type + ' ' + access_token,
+                   'Content-Type': 'application/x-www-form-urlencoded'
+                    } });
+                const data = await response.json();
+                var pax_records = data.Passengers;
+                var rows = "";
+                if (pax_records.length == 0) {
+                    $('#all_passengers_table').find('tbody').remove();
+                    $('#all_passengers_table').append(
+                    "<tbody><tr><tr><td  colspan=10>No passenger information found in the system</td></tr></tbody>");
+                }
+                for (const data of pax_records) {
+                    eachRow =
+                        "<td>" + data.pid + "</td>" +
+                        "<td>" + data.pnr + "</td>" +
+                        "<td>" + data.passport_number  + "</td>" +
+                        "<td>" + data.family_name + "</td>" +
+                        "<td>" + data.given_name + "</td>" +
+                        "<td>" + data.contact_number + "</td>" +
+                        "<td>" + data.eticket_number + "</td>" +
+                        "<td>" + data.seat_number + "</td>" +
+                        "<td>" + data.fare_class + "</td>" +
+                        "<td>" + data.remarks + "</td>";
+                    rows += "<tbody><tr>" + eachRow + "</tr></tbody>";
+                }
+                printRows = "<tbody><tr>" + rows + "</tr></tbody>";
+                // add all the rows to the table
+                $('#all_passengers_table').find('tbody').remove();
+                $('#all_passengers_table').append(printRows);
+                //$('#all_passengers_table').DataTable();
+            } catch (error) {
+                console.log(error)
+                $('#all_passengers_table').find('tbody').remove();
+                $('#all_passengers_table').append(
+                "<tbody><tr><tr><td  colspan=10>No passenger information found in the system</td></tr></tbody>");
+              }
+          });
+        </script>
+
+    </div>
+
+</body>
+</html>

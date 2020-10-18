@@ -1,0 +1,1273 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/webrtc-adapter/3.3.3/adapter.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.1.10/vue.min.js"></script>
+    <script type="text/javascript" src="https://rawgit.com/schmich/instascan-builds/master/instascan.min.js"></script>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css"
+        integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+
+    <script src="https://code.jquery.com/jquery-3.4.1.slim.min.js"
+        integrity="sha384-J6qa4849blE2+poT4WnyKhv5vZF5SrPo0iEjwBvKU7imGFAV0wwj1yYfoRSJoZ+n"
+        crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"
+        integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo"
+        crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js"
+        integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6"
+        crossorigin="anonymous"></script>
+
+    <link href="vendor/fontawesome-free/css/all.min.css" rel="stylesheet" type="text/css">
+    <link
+        href="https://fonts.googleapis.com/css?family=Nunito:200,200i,300,300i,400,400i,600,600i,700,700i,800,800i,900,900i"
+        rel="stylesheet">
+    <script type="text/javascript" src="cookies.min.js"></script>
+    <link href="index.css" rel="stylesheet">
+    <link rel="icon" href="image/logo.png" type="image/icon type">
+
+    <script src="https://cdn.jsdelivr.net/npm/js-cookie@rc/dist/js.cookie.min.js"></script>
+
+    <title>Service Recovery</title>
+</head>
+
+<body>
+    <script>
+        $(async() => {
+            var url = window.location.href;
+            window.ip = url.split('/')[2].split(':')[0];
+            window.port = "8000"
+            window.delaySystem = "/delay-system"
+            console.log(ip)
+            if (ip == "" || ip == "localhost") {
+                window.ip = "http://127.0.0.1"
+                service_recovery_port = "5002"
+                passenger_port = "5003"
+                flight_port = "5001"
+                flight_status_port = "5004"
+                payment_port = "5005"
+            }
+            else{
+                window.ip = "http://" + ip
+            }
+            console.log(ip)
+        });
+    </script>
+    <!-- Items needs for authentication-->
+    <div id="api_modal" class="modal fade" data-backdrop="static" tabindex="-1" role="dialog">
+    	<div class="modal-dialog modal-login">
+    		<div class="modal-content">
+    			<form id="api_modal_form">
+    				<div class="modal-header">
+    					<h4 class="modal-title">Flight Staff Access</h4>
+    				</div>
+    				<div class="modal-body">
+    					<div class="form-group">
+    						<div class="clearfix">
+    							<label>Username</label>
+    						</div>
+    						<input type="text" class="form-control" required="required" id='oauth-username'>
+    					</div>
+                        <div class="form-group">
+    						<div class="clearfix">
+    							<label>Password</label>
+    						</div>
+    						<input type="password" class="form-control" required="required" id='oauth-password'>
+    					</div>
+                        <div id="modal_api_msg">
+                        </div>
+    				</div>
+    				<div class="modal-footer">
+    					<input type="submit" class="btn btn-primary pull-right" value="Login">
+    				</div>
+    			</form>
+    		</div>
+    	</div>
+    </div> -->
+    <script>
+    function api_check(){
+    try{
+        var bearer_token = Cookies.get('token');
+        if (bearer_token == null){
+            $('#api_modal').modal('show')
+            }
+            else{
+                window.token_type = Cookies.get('token_type');
+                window.access_token = Cookies.get('token');
+                console.log(access_token)
+            }
+    }
+    catch(error){
+        alert(error)
+    }}
+    api_check()
+    </script>
+    <script>
+    $("#api_modal_form").submit(async (event) => {
+        event.preventDefault()
+        var client_id = $("#oauth-username").val()
+        var client_secret = $("#oauth-password").val()
+        var grant_type = "client_credentials"
+        var provision_key = "5XlzYHaMyaEtQZAub1EXIbKTdJI0bpYd"
+        if (ip == "http://127.0.0.1") {
+            port = "5004"
+            checkURL = "http://localhost:8000/oauth2/token";
+        } else {
+            checkURL = ip + ":8000/oauth2/token";
+        }
+        //var checkURL = "http://localhost:8000/oauth2/token"
+        var auth_request = 'grant_type=client_credentials&client_id=' + client_id + '&client_secret=' + client_secret
+        console.log(auth_request)
+        try {
+            const response = await fetch(
+            checkURL, { method: 'POST' ,headers: { 'Content-Type': 'application/x-www-form-urlencoded','X-Forwarded-Proto':'https' },
+            body: 'grant_type=client_credentials&client_id=' + client_id + '&client_secret=' + client_secret
+            });
+            const data = await response.json();
+            bearer_token = data.access_token;
+            token_type = data.token_type;
+            console.log(data)
+            if (response.status != 200){
+                alert('Authentication invalid, please try again')
+            }
+            else{
+                $('#api_modal').modal('hide');
+                Cookies.set('token',bearer_token);
+                window.bearer_token
+                console.log(bearer_token)
+                Cookies.set('token_type',token_type);
+                window.token_type
+                console.log(Cookies.get('token'));
+                location.reload()
+            }
+        } catch (error) {
+            alert(error)
+        }
+    })
+    </script>
+
+    <!-- Nav bar starts -->
+
+    <nav class="navbar navbar-expand-lg navbar-dark" style="background-color: #003678;">
+        <a class="navbar-brand" href="#"><img class="img-profile" src="image/logo.png"></a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+            <ul class="navbar-nav mr-auto">
+                <li class="nav-item">
+                    <a class="nav-link" href="index.html">Home </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="flight.html">Flight</a>
+                </li>
+                <li class="nav-item active">
+                    <a class="nav-link" href="service_recovery.html">Service Recovery <span class="sr-only">(current)</span></a>
+                </li>
+            </ul>
+            <ui class="nav-item dropdown ml-auto">
+                <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"> <span style="color:#fff;">Flight-Agent</span>
+                <img class="img-profile rounded-circle" src="image/profile.png">
+                </a>
+                <div class="shadow-sm dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdownMenuLink">
+                    <a class="dropdown-item" href="manager.html">Manage</a>
+                    <a class="dropdown-item" id='logout'>Log out</a>
+                </div>
+            </ui>
+    </nav>
+    <script>
+        $("#logout").click((event)=>{
+            Cookies.remove('token');
+            Cookies.remove('token_type');
+            alert('Logout Successful!')
+            location.reload()
+        });
+    </script>
+
+    <!-- Navbar ends -->
+
+    <marquee behavior="scroll" direction="left" id="scroll_header">
+        Please login to use flight delay system!
+    </marquee>
+
+    <script>
+        $(document).ready(function(){
+            $(async() => {
+                // if (ip == "http://127.0.0.1") {
+                //     port = "5004"
+                //     scrollURL = ip + ":" + port + "/flight-status/active-message";
+                // } else {
+                //     scrollURL = ip + ":" + port + delaySystem + "/flight_status/flight-status/active-message";
+                // }
+                scrollURL = "http://192.168.43.187:8000/delay-systemflight_status/flight-status/active-message"
+                try {
+                const response =
+                    await fetch(
+                    scrollURL, { method: 'GET', headers: {
+                    'Authorization': token_type + ' ' + access_token,
+			        'Content-Type': 'application/x-www-form-urlencoded'
+                     } });
+                    const data = await response.json();
+                    var message_data = data.message;
+                    if (message_data.length == 0) {
+                        $('#scroll_header').text('No message currently avaliable')
+                    }
+                    else {
+                        var full_msg = "";
+                        for (index = 0; index < message_data.length; index++){
+                            var msg = message_data[index];
+                            var main_msg = msg.message;
+                            var issuedatetime = msg.issue_datetime;
+                            var main_mid = msg.mid;
+                            var count = index + 1
+                            var temp = "     " + main_msg + " (Issued on: " + issuedatetime + ")         |         ";
+                            console.log(temp);
+                            full_msg = full_msg + temp;
+                        }
+                        $('#scroll_header').text(full_msg)
+                    }
+                } catch (error) {
+                    $('#scroll_header').text('No message currently avaliable');
+                }
+            })
+        });
+    </script>
+
+    <div class="jumbotron p-4" style="background-color: transparent;">
+
+        <h1 class="h3 p-2 text-gray-800">Service Recovery Information</h1>
+
+        <!-- Main information starts -->
+        <div class="row row-cols-1 row-cols-md-3">
+            <div class="col mb-4">
+                <div class="card h-100 border-left-primary">
+                    <div class="card-body">
+                        <div class="row align-items-center">
+                            <div class="col">
+                                <h5 class="card-title main-title">Delayed Flight Information</h5>
+                                <p class="card-text h2" id="fid"></p>
+                            </div>
+                            <div class="col-auto">
+                                <img class="icon-size" src="image/take-off.svg">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col mb-4">
+                <div class="card h-100">
+                    <div class="card-body border-left-primary">
+                        <div class="row align-items-center">
+                            <div class="col">
+                                <h5 class="card-title main-title">Delay Recovery</h5>
+                                <p class="card-text h2" id='recovery_body'></p>
+                            </div>
+                            <div class="col-auto">
+                                <img class="icon-size" src="image/information.svg">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col mb-4">
+                <div class="card h-100">
+                    <div class="card-body border-left-primary">
+                        <div class="row align-items-center">
+                            <div class="col">
+                                <h5 class="card-title main-title">QR Voucher Validation</h5>
+                                <form id="validate_voucher">
+                                <div class="form-row align-items-center">
+                                    <div class="">
+                                        <label class="sr-only" for="inlineFormInputName">Voucher ID</label>
+                                        <input type="text" class="form-control" id="input_vid"
+                                            placeholder="Scan Voucher" required>
+                                        </div>
+                                        <div class="col-auto my-1">
+                                            <button type="submit" class="btn btn-primary" id='voucher_submit'>Submit</button>
+                                        </div>
+                                    </div>
+                                </form>
+                                <a href class="btn-link small" id='qr_scan'>Open QR Scanner</a>
+                                <br><label id="invalid_vid_error" style="color: red; font-weight: 600; text-align: center;"></label>
+                            </div>
+                            <!-- Modal for QR Scanner -->
+                            <div id="app" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="exampleModalCenterTitle" aria-hidden="true">
+                                <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                        <h5 class="modal-title" id="exampleModalLongTitle">QR Scanner</h5>
+                                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                            <span aria-hidden="true">&times;</span>
+                                        </button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <section class="cameras">
+                                            <li v-for="camera in cameras" style="list-style-type: none;">
+                                            <span v-if="camera.id == activeCameraId" :title="formatName(camera.name)" class="active">{{ formatName(camera.name) }}</span>
+                                            <span v-if="camera.id != activeCameraId" :title="formatName(camera.name)">
+                                                <a @click.stop="selectCamera(camera)">{{ formatName(camera.name) }}</a>
+                                            </span>
+                                            </li>
+                                            </section>
+                                            <div class="preview-container" align="center">
+                                                <video id="preview"></video>
+                                            </div>
+                                            <section class="scans">
+                                                Scanned QR Codes
+                                                <transition-group name="scans" tag="ul">
+                                                    <li v-for="scan in scans" :key="scan.date" :title="scan.content" id="scan_input"
+                                                    value="scan.content" >{{ scan.content }}</li>
+                                                </transition-group>
+                                            </section>
+                                            <label id="success_insert" style="color: green; font-weight: 600; text-align: center;"></label>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                                            <button type="button" class="btn btn-primary" id="display_text">Insert Voucher ID</button>
+                                        </div>
+                                        <script type="text/javascript" src="app.js"></script>
+                                    </div>
+                                </div>
+                            </div>
+                            <script>
+                                $(document).ready(function(){
+                                    $(async() => {
+                                    //Change serviceURL to your own
+                                    // if (ip == "http://127.0.0.1") {
+                                    //     port = "5004"
+                                    //     var serviceURL = ip + ":" + port + "/checkflight";
+                                    // } else {
+                                    //     var serviceURL = ip + ":" + port + delaySystem + "/flight_status/checkflight";
+                                    // }
+                                    serviceURL = "http://192.168.43.187:8000/delay-system/flight_status/checkflight"
+                                        try {
+                                            const response =
+                                            await fetch(
+                                            serviceURL, { method: 'GET', headers: {
+                                            'Authorization': token_type + ' ' + access_token,
+                        			        'Content-Type': 'application/x-www-form-urlencoded'
+                                             } });
+                                            const data = await response.json();
+                                            var flight = data.message;
+                                            $('#fid').append(flight.fid)
+                                        } catch (error) {
+                                            $('#fid').append("No Flight Found")
+                                        } // error
+                                        // if (ip == "http://127.0.0.1") {
+                                        //     port = "5003"
+                                        //     var serviceURL = ip + ":" + port + "/passenger-all";
+                                        // } else {
+                                        //     var serviceURL = ip + ":" + port + delaySystem + "/passenger/passenger-all";
+                                        // }
+                                        var serviceURL = "http://192.168.43.187:8000/delay-system/passenger/passenger-all";
+                                        try {
+                                            const response =
+                                            await fetch(
+                                            serviceURL, { method: 'GET' });
+                                            const data = await response.json();
+                                            var count = data.Passengers.length;
+                                            $('#recovery_body').text(count + " Passengers Affected")
+                                        } catch {
+                                            $('#recovery_body').text("Unable to retrieve passengers.")
+                                        }
+                                    })
+                                });
+                            </script>
+                            <!-- Modal for Voucher -->
+
+                            <div class="modal fade" id="voucher_modal" tabindex="-1" role="dialog" aria-labelledby="voucher_modalLabel" aria-hidden="true">
+
+                                <div class="modal-dialog modal-dialog-centered" role="document">
+
+                                    <div class="modal-content">
+                                    <div class="modal-header" style="background-color: #003678;">
+                                    <h5 class="modal-title" id="voucher_modalLabel" style="font-weight: 500; color: white;"></h5>
+                                    <button type="button" class="close" data-dismiss="modal" aria-label="Close" style="color: #fff;">
+                                        <span aria-hidden="true">&times;</span>
+                                    </button>
+                                    </div>
+                                    <form id="redeemVoucher">
+                                    <div class="modal-body">
+
+                                        <div class="form-group">
+                                        <label for="recipient-name" class="col-form-label" style="font-size: large; color: black;">Entitlement &nbsp;&nbsp;&nbsp;&nbsp; : </label>
+                                        <label id="entitlement_modal" style="font-size: large; font-weight: 550; color: black;"></label><br>
+
+                                        <label for="recipient-name" class="col-form-label" style="font-size: large; color: black;">Passenger ID &nbsp; : </label>
+                                        <label id="pid_modal" style="font-size: large; font-weight: 550; color: black;"></label><br>
+
+                                        <label for="recipient-name" class="col-form-label" style="font-size: large; color: black;">Issued Date &nbsp;&nbsp;&nbsp; : </label>
+                                        <label id="issue_date_modal" style="font-size: large; font-weight: 550; color: black;"></label><br>
+
+                                        <label for="recipient-name" class="col-form-label" style="font-size: large; color: black;">Redemption &nbsp;&nbsp; : </label>
+                                        <label id="redemption_modal" style="font-size: large; font-weight: 550; color: black;"></label>
+                                        </div>
+                                        <div class="form-group">
+                                        <label for="message-text" class="col-form-label">Remarks:</label>
+                                        <textarea class="form-control" id="remarks_modal"></textarea>
+                                        <label id="success_redeem" style="color: green; font-weight: 600; text-align: center;"></label>
+                                        </div>
+
+                                    </div>
+                                    <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                                    <button type="submit" class="btn btn-success" id="redeemVoucherBtn" disabled>Redeem</button>
+                                    </div>
+
+                                </form>
+                                </div>
+
+                                </div>
+
+                            </div>
+                            <div class="col-auto">
+                                <img class="icon-size" src="image/qr-code.svg">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Delayed flight information -->
+
+        <div id="accordion">
+            <div class="card shadow mb-4">
+                <div class="card-header" id="headingOne">
+                    <h5 class="mb-0">
+                        <a href class="btn-link" data-toggle="collapse" data-target="#collapseOne"
+                        aria-expanded="true" aria-controls="collapseOne">
+                            Passenger Voucher Search
+                        </a>
+                    </h5>
+                </div>
+
+                <div id="collapseOne" class="collapse show" aria-labelledby="headingOne" data-parent="#accordion">
+                    <div class="card-body">
+                        <form id="searchPaxVoucher" action="">
+                            <div class="form-row align-items-center">
+                                <div class="col-sm-3 my-1">
+                                    <label class="sr-only" for="inlineFormInputName">Passenger ID</label>
+                                    <input name="paxID" type="number" class="form-control" id="paxID" placeholder="Passenger ID (e.g 1000)" required>
+                                </div>
+                                <div class="col-auto my-1">
+                                    <button type="submit" class="btn btn-primary" >Submit</button>
+                                </div>
+                            </div>
+                        </form>
+                        <br>
+                        <div class="table-responsive">
+                            <table class="table table-striped" id="current_voucher">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">Passenger ID</th>
+                                        <th scope="col">Voucher ID</th>
+                                        <th scope="col">Voucher Type</th>
+                                        <th scope="col">Issue Date</th>
+                                        <th scope="col">Entitlement</th>
+                                        <th scope="col">Validity</th>
+                                        <th scope="col">Remarks</th>
+                                    </tr>
+                                </thead>
+                            </table>
+                        </div>
+                        <label id="error_pid" style="color: red; font-weight: 600;"></label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Passenger details -->
+
+        <div class="card mb-4 shadow">
+            <div class="card-header secondary-card-header" ;>
+                Voucher Issue
+            </div>
+            <div class="card-body">
+                <p class="card-text">Enter Passenger's ID:</p>
+                <!-- Passenger detail form -->
+                <form id="retrieveEligibleVouchers">
+                    <div class="form-row align-items-center">
+                        <div class="col-sm-2 my-1">
+                            <label class="sr-only" for="inlineFormInputName">Name</label>
+                            <input name="voucher_pid" type="text" class="form-control" id="voucher_pid"
+                                placeholder="Passenger ID">
+                        </div>
+                        <div class="col-sm-9 my-1">
+                            <label class="sr-only" for="inlineFormInputName">Name</label>
+                            <input name="remarks" type="text" class="form-control" id="remarks"
+                                placeholder="Remarks">
+                        </div>
+                        <div class="col-auto my-1">
+                            <button type="submit" class="btn btn-primary" id="retrieve">Retrieve </button>
+                        </div>
+                    </div>
+                </form>
+                <label id="error" style="color: red; font-weight: 600;"></label>
+            </div>
+        <div id="vouchers_available" style="display: none;">
+            <!-- Voucher Tabs -->
+            <ul class="nav nav-tabs mt-3" id="myTab" role="tablist">
+                <li class="nav-item">
+                    <a class="nav-link active" id="hotel-tab" data-toggle="tab" href="#hotel" role="tab"
+                        aria-controls="home" aria-selected="true">Hotel Voucher</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="meal-tab" data-toggle="tab" href="#meal" role="tab"
+                        aria-controls="profile" aria-selected="false">Meal Voucher</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="lounge-tab" data-toggle="tab" href="#lounge" role="tab"
+                        aria-controls="contact" aria-selected="false">Lounge Voucher</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="transport-tab" data-toggle="tab" href="#transport" role="tab"
+                        aria-controls="contact" aria-selected="false">Transport Voucher</a>
+                </li>
+            </ul>
+
+            <!-- Hotel Tab -->
+
+            <div class="tab-content" id="myTabContent">
+                <div class="tab-pane fade show active" id="hotel" role="tabpanel" aria-labelledby="hotel-tab" >
+                    <div class="card mb-4">
+                        <div class="card-body">
+                            <h5 class="card-title">Hotels Avaliable</h5>
+                            <p class="card-text">This shows all hotels currently on hold for passengers of this flight.
+                            </p>
+                            <form id="issueHotelVoucher">
+                                <input type="hidden" id="h_pid" value="">
+                                <input type="hidden" id="h_fareclass" value="">
+                            <table class="table table-striped" id='hotel_table'>
+                                <thead>
+                                    <tr>
+                                        <th scope="col">Hotel No.</th>
+                                        <th scope="col">Hotel Name</th>
+                                        <th scope="col">Hotel Address</th>
+                                        <th scope="col">Rooms(First)</th>
+                                        <th scope="col">Rooms(Business)</th>
+                                        <th scope="col">Rooms(Economy)</th>
+                                        <th scope="col">Selection</th>
+
+                                    </tr>
+                                </thead>
+                                <tbody id="hotel_table_tbody">
+
+                                    <!-- <input type="hidden" id="fare_class" value="">
+                                    <input type="hidden" id="amount" value="">
+                                    <input type="hidden" id="pid" value="">
+                                    <tr><td>Breakfast</td><td><span class="fare_class"></span></td><td><span class="entitlement"></span></td><td><div class="checkboxx"><input type="checkbox" name="meal_type" value="Breakfast"></div></td></tr>
+                                    <tr><td>Lunch</td><td><span class="fare_class"></span></td><td><span class="entitlement"></span></td><td><div class="checkboxx"><input type="checkbox" name="meal_type" value="Lunch"></div></td></tr>
+                                    <tr><td>Dinner</td><td><span class="fare_class"></span></td><td><span class="entitlement"></span></td><td><div class="checkboxx"><input type="checkbox" name="meal_type" value="Dinner"></div></td></tr> -->
+                                </tbody>
+                            </table>
+                            <button class='btn btn-primary btn btn-block' type='submit'>Issue Hotel Voucher</button>
+                        </form>
+                        </div>
+                        <label id="hotel_error" style="color: red; font-weight: 600; text-align: center;"></label>
+                    </div>
+                </div>
+                <!-- Meal Tab -->
+
+                <div class="tab-pane fade" id="meal" role="tabpanel" aria-labelledby="meal-tab">
+                    <div class="card mb-4">
+                        <div class="card-body">
+                            <h5 class="card-title">Issue Meal Voucher</h5>
+                            <p class="card-text">Please issue voucher according to class of travel
+                            </p>
+                            <form id='issueMealVoucher' method='POST' action=''>
+                            <table class="table table-striped" id='meal_table'>
+
+                                <thead>
+                                    <tr>
+                                        <th scope="col">Meal Voucher Type</th>
+                                        <th scope="col">Class of Travel</th>
+                                        <th scope="col">Value</th>
+                                        <th scope="col">Selection</th>
+                                    </tr>
+                                    <input type="hidden" id="fare_class" value="">
+                                    <input type="hidden" id="amount" value="">
+                                    <input type="hidden" id="pid" value="">
+                                </thead>
+                                <tbody id='meal_tbody'>
+
+                                    <!-- <input type="hidden" id="fare_class" value="">
+                                    <input type="hidden" id="amount" value="">
+                                    <input type="hidden" id="pid" value="">
+                                    <tr><td>Breakfast</td><td><span class="fare_class"></span></td><td><span class="entitlement"></span></td><td><div class="checkboxx"><input type="checkbox" name="meal_type" value="Breakfast"></div></td></tr>
+                                    <tr><td>Lunch</td><td><span class="fare_class"></span></td><td><span class="entitlement"></span></td><td><div class="checkboxx"><input type="checkbox" name="meal_type" value="Lunch"></div></td></tr>
+                                    <tr><td>Dinner</td><td><span class="fare_class"></span></td><td><span class="entitlement"></span></td><td><div class="checkboxx"><input type="checkbox" name="meal_type" value="Dinner"></div></td></tr> -->
+                                </tbody>
+                            </table>
+                            <button class='btn btn-primary btn btn-block' type='submit'>Issue Meal Voucher</button>
+                        </form>
+                        </div>
+                        <label id="meal_error" style="color: red; font-weight: 600; text-align: center;"></label>
+
+                    </div>
+                </div>
+
+                <!-- Lounge Tab -->
+                <div class="tab-pane fade" id="lounge" role="tabpanel" aria-labelledby="lounge-tab">
+                    <div class="card mb-4">
+                        <div class="card-body">
+                            <h5 class="card-title">Issue Lounge Voucher</h5>
+                            <p class="card-text">Please issue voucher according to class of travel
+                            </p>
+                            <form id='issueLoungeVoucher' method='POST' action=''>
+                            <table class="table table-striped" id='eligible_table'>
+                                <thead>
+                                    <tr>
+                                        <th scope="col">Lounge Voucher Type</th>
+                                        <th scope="col">Terminal</th>
+                                        <th scope="col">Selection</th>
+                                    </tr>
+                                </thead>
+                                <tbody id='lounge_tbody'>
+                                    <!-- <tr><td>The Private Room</td><td>Terminal 2/3</td><td></td></tr>
+                                    <tr><td>SilverKris</td><td>Terminal 1/2/3</td><td></td></tr>
+                                    <tr><td>Krisflyer Elite Gold Lounge</td><td>Terminal 1/2/3</td><td></td></tr>
+                                    <tr><td>Jet Quay (Landside)</td><td>Terminal 3</td><td></td></tr>
+                                    <tr><td>Plaza Premium Lounge</td><td>Terminal 1/2/3</td><td></td></tr> -->
+                                </tbody>
+                            </table>
+                            <button class='btn btn-primary btn btn-block' type='submit'>Issue Lounge Voucher</button>
+                        </form>
+                        </div>
+                        <label id="lounge_error" style="color: red; font-weight: 600; text-align: center;"></label>
+                    </div>
+                </div>
+
+                <!-- Transport Vouchers -->
+                <div class="tab-pane fade" id="transport" role="tabpanel" aria-labelledby="transport-tab">
+                    <div class="card mb-4">
+                        <div class="card-body">
+                            <h5 class="card-title">Issue Transport Voucher</h5>
+                            <p class="card-text">Please issue voucher according to class of travel
+                            </p>
+                            <form id='issueTransportVoucher' method='POST' action=''>
+                            <table class="table table-striped" id='eligible_table'>
+                                <thead>
+                                    <tr>
+                                        <th scope="col">Transport Voucher Type</th>
+                                        <th scope="col">Selection</th>
+                                    </tr>
+                                </thead>
+                                <tbody id='transport_tbody'>
+                                    <input type="hidden" id="pid" value="">
+                                    <!-- <tr><td>Taxi</td><td><input type="checkbox" name="transport_type" value="Taxi"></div></td></tr>
+                                    <tr><td>Minibus</td><td><input type="checkbox" name="transport_type" value="Minibus"></div></td></tr>
+                                    <tr><td>Hotel Bus</td><td><input type="checkbox" name="transport_type" value="Hotel Bus"></div></td></tr> -->
+                                </tbody>
+                            </table>
+                            <button class='btn btn-primary btn btn-block' type='submit'>Issue Transport Voucher</button>
+                        </form>
+                        </div>
+                        <label id="transport_error" style="color: red; font-weight: 600; text-align: center;"></label>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <label id="success" style="color: green; font-weight: 600; text-align: center;"></label>
+    </div>
+    </div>
+    <script>
+        document.body.addEventListener('click', checkClick, true);
+        // function to remove success message when clicked anywhere on the screen
+        function checkClick() {
+            $('#success').text("");
+        }
+        function showError(message) {
+            $('#error').text(message);
+        }
+        $("#display_text").click(async (event) =>  {
+            var qrcode = $("#scan_input").text();
+            console.log(qrcode);
+            var vid = qrcode.slice(-9)
+            $("#input_vid").val(vid);
+            $("#success_insert").text("Voucher ID has been inserted into text field, Click Close");
+        });
+
+        $("#validate_voucher").submit(async (event) =>  {
+            event.preventDefault();
+            $('#invalid_vid_error').text("");
+            $('#success_redeem').text("");
+            // if (ip == "http://127.0.0.1") {
+            //     port = "5002"
+            //     serviceURL = ip + ":" + port + "/get-vouchers/";
+            // } else {
+            //     serviceURL = ip + ":" + port + delaySystem + "/service_recovery/get-vouchers/";
+            // }
+            var serviceURL = "http://127.0.0.1:5002/get-vouchers/";
+            var vid = $('#input_vid').val();
+            serviceURL = serviceURL + vid;
+
+            try {
+                const response =
+                await fetch(
+                serviceURL, { method: 'GET' });
+                var data = await response.json();
+
+                if (response.ok) {
+                    console.log(data);
+                }
+                // array or array.length are false
+                if (!response.ok) {
+                    $('#invalid_vid_error').text("Voucher ID not found");
+                } else {
+                    $('#voucher_modal').modal('toggle')
+                    var remarks = "";
+                    var entitlement = data.entitlement;
+                    var pid = data.pid;
+                    var voucher_type = data.voucher_type;
+                    var issue_date = data.issue_date;
+                    var is_redeemed = data.is_redeemed;
+                    remarks = data.remarks;
+
+                    $("#voucher_modalLabel").text(voucher_type + " Voucher - " + vid);
+                    $("#entitlement_modal").text(entitlement);
+                    $("#pid_modal").text(pid);
+                    $("#issue_date_modal").text(issue_date);
+
+                    if (is_redeemed) {
+                        $("#redemption_modal").text("Redeemed");
+                        $("#redeemVoucherBtn").prop('disabled', true);
+                    } else {
+                        $("#redemption_modal").text("Unredeemed");
+                        $("#redeemVoucherBtn").prop('disabled', false);
+                    }
+                    $("#remarks_modal").val(remarks);
+                }
+            } catch (error) {
+
+                showError
+                ('There is a problem retrieving voucher data, please try again later.<br />'+error);
+            } // error
+        });
+
+        $("#redeemVoucher").submit(async (event) =>  {
+            event.preventDefault();
+            $('#success_redeem').text("");
+            // if (ip == "http://127.0.0.1") {
+            //     port = "5002"
+            //     serviceURL = ip + ":" + port + "/service-vouchers/modify";
+            // } else {
+            //     serviceURL = ip + ":" + port + delaySystem + "/service_recovery/service-vouchers/modify";
+            // }
+            var serviceURL = "http://127.0.0.1:5002/service-vouchers/modify/";
+            var remarks = $("#remarks_modal").val();
+            var vid = $('#input_vid').val();
+
+            serviceURL = serviceURL + vid;
+            try {
+                const response =
+                await fetch(
+                serviceURL, { method: 'POST',
+                headers: {"Content-Type": "application/json" },
+                body: JSON.stringify (
+                    {
+                        remarks: remarks,
+                        is_redeemed: true
+                    })}
+                );
+                const redeemResult = await response.json();
+
+                if (response.ok) {
+                    console.log(redeemResult);
+                    $('#success_redeem').text("Voucher Successfully Redeemed!");
+                    $("#redeemVoucherBtn").prop('disabled', true);
+                }
+
+            } catch (error) {
+                showError
+                ('There is a problem retrieving data, please try again later. --> '+error);
+            } // error
+        });
+
+        $("#searchPaxVoucher").submit(async (event) =>  {
+            event.preventDefault();
+            $("#current_voucher").find("tr:gt(0)").remove();
+            $('#error').text("");
+            $('#error_pid').text("");
+            $('#success').text("");
+            // if (ip == "http://127.0.0.1") {
+            //     port = "5002"
+            //     serviceURL = ip + ":" + port + "/pax-vouchers/";
+            // } else {
+            //     serviceURL = ip + ":" + port + delaySystem + "/service_recovery/pax-vouchers/";
+            // }
+            var serviceURL = "http://127.0.0.1:5002/pax-vouchers/";
+            var paxID = $('#paxID').val();
+            serviceURL = serviceURL + paxID;
+            console.log(serviceURL);
+            try {
+                const response =
+                await fetch(
+                serviceURL, { method: 'GET', headers: {
+               'Authorization': token_type + ' ' + access_token,
+               'Content-Type': 'application/x-www-form-urlencoded'
+               }});
+                const data = await response.json();
+                var pax_vouchers = data.vouchers;
+
+                if (response.ok) {
+                    console.log(pax_vouchers);
+                }
+                // array or array.length are falsy
+                if (!response.ok || !pax_vouchers.length) {
+                    $('#error_pid').text("Passenger ID Not Found or has no Vouchers");
+                } else {
+                    // for loop to setup all table rows with obtained book data
+                    var rows = "";
+                    for (const pax_voucher of pax_vouchers) {
+                        var voucher_status = "Unredeemed";
+                        if (pax_voucher.is_redeemed == true) {
+                            voucher_status = "Redeemed"
+                        }
+                        var issueDate = pax_voucher.issue_date;
+                        eachRow =
+                            "<td>" + pax_voucher.pid + "</td>" +
+                            "<td>" + pax_voucher.vid + "</td>" +
+                            "<td>" + pax_voucher.voucher_type  + "</td>" +
+                            "<td>" + issueDate.substring(0, issueDate.length - 13) + "</td>" +
+                            "<td>" + pax_voucher.entitlement + "</td>" +
+                            "<td>" + voucher_status + "</td>" +
+                            "<td>" + pax_voucher.remarks + "</td>";
+                        rows += "<tbody><tr>" + eachRow + "</tr></tbody>";
+                    }
+                    // add all the rows to the table
+                // $('#booksTable').remove();
+                    $('#current_voucher').append(rows);
+                }
+            } catch (error) {
+                showError
+                ('There is a problem retrieving voucher data, please try again later.<br />'+error);
+            } // error
+        });
+
+        $("#retrieveEligibleVouchers").submit(async (event) =>  {
+            event.preventDefault();
+            $("#eligible_table").find("tr:gt(0)").remove();
+            $('#error').text("");
+            $("#success").text("");
+            $('#hotel_error').text("");
+
+            $('#meal_error').text("");
+            $('#lounge_error').text("");
+            $('#transport_error').text("");
+            $('#meal_tbody').html("");
+            $('#lounge_tbody').html("");
+            $('#transport_tbody').html("");
+            $('#hotel_table_tbody').html("");
+            $('#vouchers_available').html();
+
+            // Change URL
+            var serviceURL = "http://127.0.0.1:5002/";
+            var hotelURL = serviceURL + "service-hotels";
+            var voucher_pid = $('#voucher_pid').val();
+            console.log(voucher_pid)
+            $('#pid').val(voucher_pid);
+            var remarks = $('#remarks').val();
+            eligibilityURL = serviceURL + "eligibility/" + voucher_pid;
+            // if (ip == "http://127.0.0.1") {
+            //     port = "5002"
+            //     hotelURL = ip + ":" + port + "/service-hotels";
+            //     eligibilityURL = ip + ":" + port + "/eligibility/" + voucher_pid;
+            // } else {
+            //     hotelURL = ip + ":" + port + delaySystem + "/service_recovery/service-hotels";
+            //     eligibilityURL = ip + ":" + port + delaySystem + "/service_recovery/eligibility/" + voucher_pid;
+            // }
+            try {
+                const response =
+                await fetch(
+                eligibilityURL, { method: 'GET'});
+                var data = await response.json();
+                console.log(data)
+                if (response.ok) {
+                    console.log(data.meal_voucher);
+                }
+                // array or array.length are false
+                if (!response.ok) {
+                    showError('Passenger not found')
+                } else {
+                    // for loop to setup all table rows with obtained book data
+                    var content = "";
+                    var fare_class = data.fare_class
+                    $('#fare_class').val(fare_class);
+                    var hotel_voucher = data.hotel_voucher
+                    var lounge_voucher = data.lounge_voucher
+                    var meal_voucher = data.meal_voucher
+                    var transport_voucher = data.transport_voucher
+                    // Hotel Tab
+                    console.log(hotel_voucher);
+                    if(hotel_voucher) {
+                        const hotel_response =
+                            await fetch(
+                            hotelURL, { method: 'GET'});
+                        var hotel_dict = await hotel_response.json();
+                        var hotel_data = hotel_dict.hotels;
+                        if (hotel_response.ok) {
+                            console.log(hotel_data);
+                            var content = '';
+                            $('#h_pid').val(voucher_pid);
+                            $('#h_fareclass').val(fare_class);
+                            for (var i = 0; i < hotel_data.length; i++) {
+                                content += '<tr id="' + hotel_data[i].hid + '">';
+                                content += '<td>' + hotel_data[i].hid + '</td>';
+                                content += '<td>' + hotel_data[i].hotel_name + '</td>';
+                                content += '<td>' + hotel_data[i].hotel_address + '</td>';
+                                content += '<td>' + hotel_data[i].first_room_qty + '</td>';
+                                content += '<td>' + hotel_data[i].business_room_qty + '</td>';
+                                content += '<td>' + hotel_data[i].economy_room_qty + '</td>';
+                                content += '<td><input type="radio" id="hotel_selection" name="hotel_selection" value="' + hotel_data[i].hid + '"></td>';
+                                content += '</tr>';
+                            }
+                            $('#hotel_table_tbody').html(content);
+                        }
+                    } else {
+                        $('#hotel_error').text("Passenger not Eligible for Hotel Stay");
+                        $('#hotel_tab').hide();
+                    }
+                    // Meal Tab
+                    if(meal_voucher != 0) {
+                        $("#amount").val(meal_voucher);
+                        var amt = $("#amount").val();
+                        var content = '<tr><td>Breakfast</td><td><span class="fare_class">' + fare_class + '</span></td><td><span class="entitlement">' + meal_voucher + '</span></td><td><div class="checkboxx"><input type="checkbox" name="meal_type" value="Breakfast"></div></td></tr>' +
+                                    '<tr><td>Lunch</td><td><span class="fare_class">' + fare_class + '</span></td><td><span class="entitlement">' + meal_voucher + '</span></td><td><div class="checkboxx"><input type="checkbox" name="meal_type" value="Lunch"></div></td></tr>' +
+                                    '<tr><td>Dinner</td><td><span class="fare_class">' + fare_class + '</span></td><td><span class="entitlement">' + meal_voucher + '</span></td><td><div class="checkboxx"><input type="checkbox" name="meal_type" value="Dinner"></div></td></tr>';
+                        $('#meal_tbody').html(content);
+                    } else {
+                        $('#meal_error').text("Passenger not Eligible for Meal Vouchers");
+                    }
+                    // Lounge Tab
+                    console.log(lounge_voucher);
+                    if(lounge_voucher) {
+                        var content = '<tr><td>The Private Room</td><td>Terminal 2/3</td><td><div class="checkboxx"><input type="checkbox" name="lounge_type" value="The Private Room"></div></td></tr>' +
+                                    '<tr><td>SilverKris</td><td>Terminal 1/2/3</td><td><div class="checkboxx"><input type="checkbox" name="lounge_type" value="SilverKris"></div></td></tr>' +
+                                    '<tr><td>Krisflyer Elite Gold Lounge</td><td>Terminal 1/2/3</td><td><div class="checkboxx"><input type="checkbox" name="lounge_type" value="Krisflyer Elite Gold Lounge"></div></td></tr>' +
+                                    '<tr><td>Jet Quay (Landside)</td><td>Terminal 3</td><td><div class="checkboxx"><input type="checkbox" name="lounge_type" value="Jet Quay (Landside)"></div></td></tr>' +
+                                    '<tr><td>Plaza Premium Lounge</td><td>Terminal 1/2/3</td><td><div class="checkboxx"><input type="checkbox" name="lounge_type" value="Plaza Premium Lounge"></div></td></tr>';
+                        $('#lounge_tbody').html(content);
+                    } else {
+                        $('#lounge_error').text("Passenger not Eligible for Lounge Vouchers");
+                    }
+                    //Transport Tab
+                    console.log(transport_voucher);
+                    if(transport_voucher) {
+                        var content = '<tr><td>Taxi</td><td><input type="checkbox" name="transport_type" value="Taxi"></div></td></tr>' +
+                                    '<tr><td>Minibus</td><td><input type="checkbox" name="transport_type" value="Minibus"></div></td></tr>' +
+                                    '<tr><td>Hotel Bus</td><td><input type="checkbox" name="transport_type" value="Hotel Bus"></div></td></tr>';
+                        $('#transport_tbody').html(content);
+                    } else {
+                        $('#transport_error').text("Passenger not Eligible for Transport Vouchers");
+                    }
+                    //show vouchers tabs
+                    $('#vouchers_available').show();
+                }
+            } catch (error) {
+            showError("Please enter a valid Passenger ID");
+            } // error
+        });
+        // function to make ID for voucher
+        function makeid(length) {
+            var result           = '';
+            var characters       = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+            var charactersLength = characters.length;
+            for ( var i = 0; i < length; i++ ) {
+                result += characters.charAt(Math.floor(Math.random() * charactersLength));
+            }
+            return result;
+        }
+        $("#issueHotelVoucher").submit(async (event) =>  {
+            event.preventDefault();
+            $('#success').text("");
+            $("#hotel_error").text("");
+            // Change serviceURL to your own
+            // if (ip == "http://127.0.0.1") {
+            //     port = "5002"
+            //     serviceURL = ip + ":" + port + "/service-vouchers/issue";
+            // } else {
+            //     serviceURL = ip + ":" + port + delaySystem + "/service_recovery/service-vouchers/issue";
+            // }
+            var serviceURL = "http://127.0.0.1:5002/service-vouchers/issue";
+            var checked_meal = [];
+            var hid = $("input[name='hotel_selection']:checked").val();
+            var pid = $('#h_pid').val();
+            console.log(hid)
+            var pDate = new Date().toJSON().slice(0, 10);
+            // if (ip == "http://127.0.0.1") {
+            //     port = "5002"
+            //     hotel_url = ip + ":" + port + "/service-hotels/";
+            // } else {
+            //     hotel_url = ip + ":" + port + delaySystem + "/service_recovery/service-hotels/" + hid;
+            // }
+            var hotel_url = "http://127.0.0.1:5002/service-hotels/"
+            const hotel_response =
+                await fetch(
+                hotel_url, { method: 'GET'});
+            var hotel_data = await hotel_response.json();
+            var entitlement = "1 X Superior Queen Room (with complimentary lounge access) @ " + hotel_data.hotel_name;
+            // if (ip == "http://127.0.0.1") {
+            //     port = "5002"
+            //     hotel_modify_url = ip + ":" + port + "/service-hotels/modify/" + hid;
+            // } else {
+            //     hotel_modify_url = ip + ":" + port + delaySystem + "/service_recovery/service-hotels/modify/" + hid;
+            // }
+            var hotel_modify_url = "http://127.0.0.1:5002/service-hotels/modify/" + hid;
+            var fare_class = $("#h_fareclass").val();
+            var amtRooms = 0;
+            var roomTypeQty = "";
+            console.log(fare_class);
+            if (fare_class == "ECONOMY") {
+                amtRooms = hotel_data.economy_room_qty
+                roomTypeQty = "economy_room_qty";
+            } else if (fare_class == "BUSINESS") {
+                amtRooms = hotel_data.business_room_qty
+                roomTypeQty = "business_room_qty";
+            } else {
+                amtRooms = hotel_data.first_room_qty
+                roomTypeQty = "first_room_qty";
+            }
+            if (amtRooms - 1 < 0) {
+                $("#hotel_error").text('No More Rooms Available for ' + fare_class + " Class");
+            } else {
+                //try {
+                    var item = {}
+                    item[roomTypeQty] = amtRooms - 1;
+                    console.log(item);
+                    const status_response =
+                    await fetch(
+                    hotel_modify_url, { method: 'POST',
+                        headers: {"Content-Type": "application/json" },
+                        body: JSON.stringify(item)
+                    });
+                    if (!status_response) {
+                        showError
+                        ('There is a problem in the response. --> '+error);
+                    }
+                    if (status_response) {
+                        var vid = "H" + makeid(8);
+                        const response =
+                        await fetch(
+                        serviceURL, { method: 'POST',
+                        headers: {"Content-Type": "application/json" },
+                        body: JSON.stringify (
+                            {
+                                vid: vid,
+                                pid: pid,
+                                voucher_type: "Hotel",
+                                issue_date: pDate,
+                                entitlement: entitlement,
+                                remarks: "",
+                                hid: hid
+                            })}
+                        );
+                        const issueVoucher = await response.json();
+
+                        if (response.ok) {
+                            console.log(issueVoucher);
+                            $('#success').text("Hotel Voucher Successfully Issued, reloading page... please wait");
+                            setTimeout(location.reload.bind(location), 3000);
+                        }
+                        if (!response.ok) {
+                            showError('Error')
+                        }
+                     }
+                // } catch (error) {
+                //     showError('There is a problem retrieving data, please try again later. --> '+error);
+                // }
+            }
+        });
+
+        $("#issueMealVoucher").submit(async (event) =>  {
+            event.preventDefault();
+            // Change serviceURL to your own
+            // if (ip == "http://127.0.0.1") {
+            //     port = "5002"
+            //     serviceURL = ip + ":" + port + "/service-vouchers/issue";
+            // } else {
+            //     serviceURL = ip + ":" + port + delaySystem + "/service_recovery/service-vouchers/issue";
+            // }
+            var serviceURL = "http://127.0.0.1:5002/service-vouchers/issue";
+            var checked_meal = [];
+            var pid = $('#pid').val();
+            var fare_class= $('#fare_class').val();
+            var amount = $('#amount').val();
+            var pDate = new Date().toJSON().slice(0, 10);
+
+            $.each($("input[name='meal_type']:checked"), function(){
+                checked_meal.push($(this).val());
+            });
+            for (i=0; i<checked_meal.length; i++) {
+                entitlement = "$" + amount + " Off " + checked_meal[i];
+                var vid = "M" + makeid(8);
+                try {
+                    const response =
+                    await fetch(
+                    serviceURL, { method: 'POST',
+                    headers: {"Content-Type": "application/json" },
+                    body: JSON.stringify (
+                        {
+                            vid: vid,
+                            pid: pid,
+                            voucher_type: "Meal",
+                            issue_date: pDate,
+                            entitlement: entitlement,
+                            remarks: "",
+                            hid: null
+                        })}
+                );
+                const issueVoucher = await response.json();
+
+                if (response.ok) {
+                    console.log(issueVoucher);
+                    $('#success').text("Voucher Successfully Issued");
+                }
+                // array or array.length are false
+                if (!response.ok) {
+                    showError('Error')
+                }
+
+                } catch (error) {
+                    // Errors when calling the service; such as network error,
+                    // service offline, etc
+                    showError
+                    ('There is a problem retrieving data, please try again later. --> '+error);
+                } // error
+            }
+        });
+
+        $("#issueLoungeVoucher").submit(async (event) =>  {
+            event.preventDefault();
+            // if (ip == "http://127.0.0.1") {
+            //     port = "5002"
+            //     serviceURL = ip + ":" + port + "/service-vouchers/issue";
+            // } else {
+            //     serviceURL = ip + ":" + port + delaySystem + "/service_recovery/service-vouchers/issue";
+            // }
+            var serviceURL = "http://127.0.0.1:5002/service-vouchers/issue";
+            var favorite = [];
+            //obtain values for voucher
+            var pid = $('#voucher_pid').val();
+            var pDate = new Date().toJSON().slice(0, 10);
+            var pDateSeconds = pDate.valueOf()/1000;
+            //get voucher options
+            $.each($("input[name='lounge_type']:checked"), function(){
+                favorite.push($(this).val());
+            });
+            //for each selection create voucher
+            for (i=0; i<favorite.length; i++) {
+                console.log(favorite[i]);
+                entitlement = favorite[i];
+                var vid = "T" + makeid(8);
+                try {
+                    const response =
+                    await fetch(
+                    serviceURL, { method: 'POST',
+                    headers: {"Content-Type": "application/json" },
+                    body: JSON.stringify (
+                        {
+                            vid: vid,
+                            pid: pid,
+                            voucher_type: "Lounge",
+                            issue_date: pDate,
+                            entitlement: entitlement,
+                            remarks: "",
+                            hid: null
+                        })}
+                );
+                const issueVoucher = await response.json();
+
+                if (response.ok) {
+                    console.log(issueVoucher);
+                    $('#success').text("Voucher Successfully Issued");
+                }
+                // array or array.length are false
+                if (!response.ok) {
+                    showError('Error')
+                }
+                }
+                catch (error) {
+                    showError('There is a problem retrieving data, please try again later. --> '+error);
+                } // error
+            }
+        });
+
+        $("#issueTransportVoucher").submit(async (event) =>  {
+            event.preventDefault();
+            // if (ip == "http://127.0.0.1") {
+            //     port = "5002"
+            //     serviceURL = ip + ":" + port + "/service-vouchers/issue";
+            // } else {
+            //     serviceURL = ip + ":" + port + delaySystem + "/service_recovery/service-vouchers/issue";
+            // }
+            var serviceURL = "http://127.0.0.1:5002/service-vouchers/issue";
+            var favorite = [];
+            //obtain values for voucher
+            var pid = $('#voucher_pid').val();
+            var pDate = new Date().toJSON().slice(0, 10);
+            var pDateSeconds = pDate.valueOf()/1000;
+            //get voucher options
+            $.each($("input[name='transport_type']:checked"), function(){
+                favorite.push($(this).val());
+            });
+            //for each selection create voucher
+            for (i=0; i<favorite.length; i++) {
+                console.log(favorite[i]);
+                entitlement = favorite[i];
+                var vid = "T" + makeid(8);
+                try {
+                    const response =
+                    await fetch(
+                    serviceURL, { method: 'POST',
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify (
+                        {
+                            vid: vid,
+                            pid: pid,
+                            voucher_type: "Transport",
+                            issue_date: pDate,
+                            entitlement: entitlement,
+                            remarks: "",
+                            hid: null
+                        })}
+                );
+                const issueVoucher = await response.json();
+                if (response.ok) {
+                    console.log(issueVoucher);
+                    $('#success').text("Voucher Successfully Issued");
+                    // window.location.href = "index.html";
+                }
+                // array or array.length are false
+                if (!response.ok) {
+                    showError('Error')
+                }
+                } catch (error) {
+                    // Errors when calling the service; such as network error,
+                    // service offline, etc
+                    showError
+                    ('There is a problem retrieving data, please try again later. --> '+error);
+                } // error
+            }
+        });
+
+        var qrButton = document.getElementById('qr_scan');
+        qrButton.onclick = function(){
+            // $('#app').show();
+            $('#app').modal('toggle')
+            $("#success_insert").text("");
+            var script = document.createElement("script");
+            script.type = "text/javascript";
+            script.src = "app.js";
+            // $("#app").append(script);
+            // document.getElementsByTagName("body")[0].appendChild(script);
+            return false;
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css"
+        integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+
+    <script src="https://code.jquery.com/jquery-3.4.1.slim.min.js"
+        integrity="sha384-J6qa4849blE2+poT4WnyKhv5vZF5SrPo0iEjwBvKU7imGFAV0wwj1yYfoRSJoZ+n"
+        crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"
+        integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo"
+        crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js"
+        integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6"
+        crossorigin="anonymous"></script>
+
+    <link href="vendor/fontawesome-free/css/all.min.css" rel="stylesheet" type="text/css">
+    <link
+        href="https://fonts.googleapis.com/css?family=Nunito:200,200i,300,300i,400,400i,600,600i,700,700i,800,800i,900,900i"
+        rel="stylesheet">
+
+    <link href="index.css" rel="stylesheet">
+
+    <script src="https://unpkg.com/gijgo@1.9.13/js/gijgo.min.js" type="text/javascript"></script>
+    <link href="https://unpkg.com/gijgo@1.9.13/css/gijgo.min.css" rel="stylesheet" type="text/css" />
+
+    <script src="https://cdn.jsdelivr.net/npm/js-cookie@rc/dist/js.cookie.min.js"></script>
+    <title>Flight</title>
+</head>
+
+<body>
+    <script>
+        $(async() => {
+            var url = window.location.href;
+            window.ip = url.split('/')[2].split(':')[0];
+            window.port = "8000"
+            window.delaySystem = "/delay-system"
+            console.log(ip)
+            if (ip == "" || ip == "localhost") {
+                window.ip = "http://127.0.0.1"
+                service_recovery_port = "5002"
+                passenger_port = "5003"
+                flight_port = "5001"
+                flight_status_port = "5004"
+                payment_port = "5005"
+            }
+            else{
+                window.ip = "http://" + ip
+            }
+            console.log(ip)
+        });
+    </script>
+    <!-- Items needs for authentication-->
+    <div id="api_modal" class="modal fade" data-backdrop="static" tabindex="-1" role="dialog">
+    	<div class="modal-dialog modal-login">
+    		<div class="modal-content">
+    			<form id="api_modal_form">
+    				<div class="modal-header">
+    					<h4 class="modal-title">Flight Staff Access</h4>
+    				</div>
+    				<div class="modal-body">
+    					<div class="form-group">
+    						<div class="clearfix">
+    							<label>Username</label>
+    						</div>
+    						<input type="text" class="form-control" required="required" id='oauth-username'>
+    					</div>
+                        <div class="form-group">
+    						<div class="clearfix">
+    							<label>Password</label>
+    						</div>
+    						<input type="password" class="form-control" required="required" id='oauth-password'>
+    					</div>
+                        <div id="modal_api_msg">
+                        </div>
+    				</div>
+    				<div class="modal-footer">
+    					<input type="submit" class="btn btn-primary pull-right" value="Login">
+    				</div>
+    			</form>
+    		</div>
+    	</div>
+    </div>
+    <script>
+    function api_check(){
+    try{
+        var bearer_token = Cookies.get('token');
+        if (bearer_token == null){
+            $('#api_modal').modal('show')
+            }
+            else{
+                window.token_type = Cookies.get('token_type');
+                window.access_token = Cookies.get('token');
+                console.log(access_token)
+            }
+    }
+    catch(error){
+        alert(error)
+    }}
+    api_check()
+    </script>
+    <script>
+    $("#api_modal_form").submit(async (event) => {
+        event.preventDefault()
+        var client_id = $("#oauth-username").val()
+        var client_secret = $("#oauth-password").val()
+        var grant_type = "client_credentials"
+        var provision_key = "5XlzYHaMyaEtQZAub1EXIbKTdJI0bpYd"
+        if (ip == "http://127.0.0.1") {
+            port = "5004"
+            checkURL = "http://localhost:8000/oauth2/token";
+        } else {
+            checkURL = ip + ":8000/oauth2/token";
+        }
+        //var checkURL = "http://localhost:8000/oauth2/token"
+        var auth_request = 'grant_type=client_credentials&client_id=' + client_id + '&client_secret=' + client_secret
+        console.log(auth_request)
+        try {
+            const response = await fetch(
+            checkURL, { method: 'POST' ,headers: { 'Content-Type': 'application/x-www-form-urlencoded','X-Forwarded-Proto':'https' },
+            body: 'grant_type=client_credentials&client_id=' + client_id + '&client_secret=' + client_secret
+            });
+            const data = await response.json();
+            bearer_token = data.access_token;
+            token_type = data.token_type;
+            console.log(data)
+            if (response.status != 200){
+                alert('Authentication invalid, please try again')
+            }
+            else{
+                $('#api_modal').modal('hide');
+                Cookies.set('token',bearer_token);
+                window.bearer_token
+                console.log(bearer_token)
+                Cookies.set('token_type',token_type);
+                window.token_type
+                console.log(Cookies.get('token'));
+                location.reload()
+            }
+        } catch (error) {
+            alert(error)
+        }
+    })
+    </script>
+    <!-- Nav bar starts-->
+
+    <nav class="navbar navbar-expand-lg navbar-dark" style="background-color: #003678;">
+        <a class="navbar-brand" href="#"><img class="img-profile" src="image/logo.png"></a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+            <ul class="navbar-nav mr-auto">
+                <li class="nav-item">
+                    <a class="nav-link" href="index.html">Home</a>
+                </li>
+                <li class="nav-item active">
+                    <a class="nav-link" href="flight.html">Flight<span class="sr-only">(current)</span></a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="service_recovery.html">Service Recovery</a>
+                </li>
+            </ul>
+            <ui class="nav-item dropdown ml-auto">
+                <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"> <span style="color:#fff;">Flight-Agent</span>
+                <img class="img-profile rounded-circle" src="image/profile.png">
+                </a>
+                <div class="shadow-sm dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdownMenuLink">
+                    <a class="dropdown-item" href="manager.html">Manage</a>
+                    <a class="dropdown-item" id='logout'>Log out</a>
+                </div>
+            </ui>
+    </nav>
+    <script>
+        $("#logout").click((event)=>{
+            Cookies.remove('token');
+            Cookies.remove('token_type');
+            alert('Logout Successful!')
+            location.reload()
+        });
+    </script>
+    <!-- Navbar ends -->
+    <marquee behavior="scroll" direction="left" id="scroll_header">
+        Please login to use flight delay system!
+    </marquee>
+
+    <script>
+        $(document).ready(function(){
+            $(async() => {
+                if (ip == "http://127.0.0.1") {
+                    port = "5004"
+                    scrollURL = ip + ":" + port + "/flight-status/active-message";
+                } else {
+                    scrollURL = ip + ":" + port + delaySystem + "/flight_status/flight-status/active-message";
+                }
+                //scrollURL = "http://127.0.0.1:5004/flight-status/active-message"
+                try {
+                const response =
+                    await fetch(
+                    scrollURL, { method: 'GET', headers: {
+                    'Authorization': token_type + ' ' + access_token,
+			        'Content-Type': 'application/x-www-form-urlencoded'
+                     } });
+                    const data = await response.json();
+                    var message_data = data.message;
+                    if (message_data.length == 0) {
+                        $('#scroll_header').text('No message currently avaliable')
+                    }
+                    else {
+                        var full_msg = "";
+                        for (index = 0; index < message_data.length; index++){
+                            var msg = message_data[index];
+                            var main_msg = msg.message;
+                            var issuedatetime = msg.issue_datetime;
+                            var main_mid = msg.mid;
+                            var count = index + 1
+                            var temp = "     " + main_msg + " (Issued on: " + issuedatetime + ")         |         ";
+                            console.log(temp);
+                            full_msg = full_msg + temp;
+                        }
+                        $('#scroll_header').text(full_msg)
+                    }
+                } catch (error) {
+                    $('#scroll_header').text('No message currently avaliable');
+                }
+            })
+        });
+    </script>
+    <div class="jumbotron p-4" style="background-color: transparent;">
+
+        <h1 class="h3 p-2 text-gray-800">Flight Information</h1>
+
+        <!-- Main information starts -->
+
+        <div class="row row-cols-1 row-cols-md-3">
+            <div class="col mb-4">
+                <div class="card h-100 border-left-primary">
+                    <div class="card-body">
+                        <div class="row align-items-center">
+                            <div class="col">
+                                <h5 class="card-title main-title">Delayed Flight Information</h5>
+                                <p class="card-text h2" id="fid"></p>
+                            </div>
+                            <div class="col-auto">
+                                <img class="icon-size" src="image/take-off.svg">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col mb-4">
+                <div class="card h-100">
+                    <div class="card-body border-left-primary">
+                        <div class="row align-items-center">
+                            <div class="col">
+                                <h5 class="card-title main-title">Recovery</h5>
+                                <p class="card-text h2" id='recovery_body'></p>
+                            </div>
+                            <div class="col-auto">
+                                <img class="icon-size" src="image/information.svg">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Passenger flight search -->
+
+        <div id="accordion">
+            <div class="card shadow mb-4">
+                <div class="card-header" id="headingOne">
+                    <h5 class="mb-0">
+                        <a href class="btn-link" data-toggle="collapse" data-target="#collapseOne"
+                        aria-expanded="true" aria-controls="collapseOne">
+                            Passenger Flight Search
+                        </a>
+                    </h5>
+                </div>
+
+                <div id="collapseOne" class="collapse show" aria-labelledby="headingOne" data-parent="#accordion">
+                    <div class="card-body">
+                        <form id="passengerFlightSearch">
+                            <div class="form-row align-items-center">
+                                <div class="col-sm-3 my-1">
+                                    <label class="sr-only" for="inlineFormInputName">Passenger ID</label>
+                                    <input type="text" class="form-control" id="pid" placeholder="Passenger No." required autocomplete="off">
+                                </div>
+                                <div class="col-auto my-1">
+                                    <button type="submit" class="btn btn-primary" id='pax_submit'>Submit</button>
+                                </div>
+                            </div>
+                        </form>
+                        <label id="error" style="color: red; font-weight: 600;"></label>
+                        <br>
+                        <div class="table-responsive">
+                          <table class="table table-striped" id='pax_flight_data'>
+                            <thead>
+                                <tr>
+                                    <th scope="col">Flight No.</th>
+                                    <th scope="col">Departure Date</th>
+                                    <th scope="col">Departure Airport</th>
+                                    <th scope="col">Departure Time</th>
+                                    <th scope="col">Arrival Date</th>
+                                    <th scope="col">Arrival Airport</th>
+                                    <th scope="col">Arrival Time</th>
+                                    <th scope="col">Travel Time</th>
+                                    <th scope="col">Fare Class</th>
+                                    <th scope="col">Ticket Status</th>
+                                </tr>
+                            </thead>
+                        </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+        <script>
+            $(document).ready(function(){
+                 $(async() => {
+                     if (ip == "http://127.0.0.1") {
+                         port = "5004"
+                         serviceURL = ip + ":" + port + "/checkflight";
+                     } else {
+                         serviceURL = ip + ":" + port + delaySystem + "/flight_status/checkflight";
+                     }
+                     //var serviceURL = "http://127.0.0.1:5004/checkflight";
+                     try {
+                        const response =
+                         await fetch(
+                         serviceURL, { method: 'GET', headers: {
+     			        'Authorization': token_type + ' ' + access_token,
+     			        'Content-Type': 'application/x-www-form-urlencoded'
+     		            }});
+                         //const response = await fetch(serviceURL, { method: 'GET'});
+                         const data = await response.json();
+                         var flight = data.message;
+                         var rows = "";
+                         eachRow =
+                             "<td>" + flight.fid + "</td>" +
+                             "<td>" + flight.depart + " TO " + flight.arrive + "</td>" +
+                             "<td>" + flight.std + "</td>" +
+                             "<td>" + flight.etd + "</td>" +
+                             "<td>" + flight.sta + "</td>" +
+                             "<td>" + flight.eta + "</td>" +
+                             "<td>" + flight.status + "</td>";
+                         rows += "<tbody><tr>" + eachRow + "</tr></tbody>";
+                         $('#flight_info').append(rows);
+                         console.log(flight.fid)
+                         $('#fid').text(flight.fid)
+                     } catch (error) {
+                         $('#fid').append("No Flight Found")
+                         $('#flight_info').append(
+                         "<tbody><tr><tr><td  colspan=7>No flight is found in the system</td></tr></tbody>");
+                     } // error
+
+                //find number of pax for the delayed flight, all passengers in passenger table
+                if (ip == "http://127.0.0.1") {
+                    port = "5003"
+                    serviceURL = ip + ":" + port + "/passenger-all";
+                } else {
+                    serviceURL = ip + ":" + port + delaySystem + "/passenger/passenger-all";
+                }
+                //var serviceURL = "http://127.0.0.1:5003/passenger-all";
+                     try {
+                        //const response = await fetch(serviceURL, { method: 'GET'});
+                         await fetch(
+                         serviceURL, { method: 'GET', headers: {
+     			        'Authorization': token_type + ' ' + access_token,
+     			        'Content-Type': 'application/x-www-form-urlencoded'
+     		            }});
+                         const data = await response.json();
+                         var count = data.Passengers.length;
+                         $('#recovery_body').text(count + " Passengers")
+                     } catch {
+                        $('#recovery_body').text("Unable to retrieve passengers.")
+                     }
+                 })
+                 });
+        </script>
+
+        <ul class="nav nav-tabs mt-3" id="myTab" role="tablist">
+            <li class="nav-item">
+                <a class="nav-link active" id="internal_flights-tab" data-toggle="tab" href="#internal_flights" role="tab"
+                    aria-controls="internal_flights" aria-selected="false">Search Existing Flight List</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" id="external_flights-tab" data-toggle="tab" href="#external_flights" role="tab"
+                    aria-controls="external_flights" aria-selected="true">Search Amadeus Booking System</a>
+            </li>
+        </ul>
+        <div class="tab-content" id="myTabContent">
+            <div class="tab-pane fade show active" id="internal_flights" role="tabpanel" aria-labelledby="internal_flights-tab">
+                <div class="card mb-4 shadow">
+                    <form id="internal_flight_search_form" autocomplete="off">
+                        <table class="table table-borderless">
+                            <tr>
+                                <td>
+                                    <div class="form-group">
+                                        <label for="origin_airport" class="col-form-label">Origin Airport</label>
+                                        <input type="text" class="form-control" id="origin_airport_internal" maxlength="3" placeholder="Enter 3 Digit IATA Code" required>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="form-group">
+                                          <label for="destination_airport" class="col-form-label">Destination Airport</label>
+                                          <input class="form-control" id="destination_airport_internal" maxlength="3" placeholder="Enter 3 Digit IATA Code" required>
+                                    </div>
+                                </td>
+
+                                <td class="align-middle">
+                                    <div class="form-group pt-2">
+                                        <label for="travel_class" class="col-form-label">  </label>
+                                        <button type="submit" class="btn btn-primary form-control" id='internal_flight_search'>Search
+                                        <span id="internal_status" class="" role="status" aria-hidden="true"></span>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </table>
+                    </form>
+                    <form id='internal_flight_booking_form' autocomplete = 'off' class='form-group'>
+                        <div class="container-responsive" id="internal_search_results">
+                        </div>
+                    </form>
+                </div>
+            </div>
+            <div class="tab-pane fade" id="external_flights" role="tabpanel" aria-labelledby="external_flights-tab">
+                <div class="card mb-4 shadow">
+                    <form id="external_flight_search_form" autocomplete="off">
+                        <table class="table table-borderless">
+                        <tr>
+                            <td>
+                                <div class="form-group">
+                                    <label for="origin_airport" class="col-form-label">Origin Airport</label>
+                                    <input type="text" class="form-control" id="origin_airport" maxlength="3" placeholder="Enter 3 Digit IATA Code" required>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="form-group">
+                                      <label for="destination_airport" class="col-form-label">Destination Airport</label>
+                                      <input class="form-control" id="destination_airport" maxlength="3" placeholder="Enter 3 Digit IATA Code" required>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="form-group">
+                                      <label for="dep_date" class="col-form-label">Departure Date</label>
+                                      <input type='text' class="form-control" id="dep_date" placeholder="YYYY-MM-DD" required>
+                                      <script>
+                                        $('#dep_date').datepicker({
+                                        uiLibrary: 'bootstrap',
+                                        format: 'yyyy-mm-dd', footer: true, header: true,
+                                        keyboardNavigation: true,
+                                        showOtherMonths: true,
+                                        showRightIcon: true
+                                        });
+                                      </script>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="form-group">
+                                    <label for="travel_class" class="col-form-label">Travel Class</label>
+                                    <select class="form-control" id="travel_class">
+                                      <option>ECONOMY</option>
+                                      <option>BUSINESS</option>
+                                      <option>FIRST</option>
+                                    </select>
+                                </div>
+                            </td>
+                            <td class="align-middle">
+                                <div class="form-group pt-2">
+                                    <label for="travel_class" class="col-form-label">  </label>
+                                    <button type="submit" class="btn btn-primary form-control" id='external_flight_search'>Search
+                                    <span id="external_status" class="" role="status" aria-hidden="true"></span>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        </table>
+                    </form>
+                    <form id='external_flight_booking_form' autocomplete = 'off' class='form-group'>
+                        <div class="container-responsive" id="flight_search_results">
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>
+<script>
+$("#external_flight_search_form").submit(async(event) => {
+    if (ip == "http://127.0.0.1") {
+        port = "5001"
+        SearchURL = ip + ":" + port + "/flight-records/search-external";
+    } else {
+        SearchURL = ip + ":" + port + delaySystem + "/flight/flight-records/search-external";
+    }
+    event.preventDefault();
+    var origin_airport = $("#origin_airport").val().toUpperCase();
+    var destination_airport = $("#destination_airport").val().toUpperCase();
+    var departure_date = $("#dep_date").val();
+    var travel_class = $("#travel_class").val();
+    //var SearchURL = "http://127.0.0.1:5001/flight-records/search-external";
+    var external_flight_info = {
+        'origin_airport':origin_airport,
+        'destination_airport':destination_airport,
+        'departure_date':departure_date,
+        'travel_class':travel_class
+    }
+    try{
+        $('#external_status').addClass('spinner-border spinner-border-sm');
+        const response =
+        await fetch(
+           SearchURL, { method: 'POST', headers: { 'Authorization': token_type + ' ' + access_token, "Content-Type": "application/json" }, mode: 'cors', body: JSON.stringify(external_flight_info) }
+       );
+        // await fetch(
+        //    SearchURL, { method: 'POST', headers: { "Content-Type": "application/json" }, mode: 'cors', body: JSON.stringify(external_flight_info) }
+        // );
+        const data = await response.json();
+        var ex_flight_records = data.flights
+        $('#ex_flight_data').find('tbody').remove();
+        final_output = ""
+        var header = "<div class='row'><div class='form-group'><div class='col-auto'><div class='input-group'><div class='input-group-prepend'><span class='input-group-text' id='basic-addon1'>Passenger ID</span></div><input type='text' class='form-control' required placeholder='Scan/Input Passenger ID' id='external_booking_pax_id'></div></div></div><div class='form-group'><div class='col-auto'><div class='input-group'><div class='input-group-prepend'></div></div></div></div><div class='col'><div class='form-group'><div class='input-group'><div class='input-group-prepend'><span class='input-group-text' id='basic-addon3'>Remarks</span></div><input type='text' required class='form-control'  id='external_booking_remarks'></div></div></div><div class='form-group'><div class='col-auto'></div></div></div><tbody>";
+        var footer = "<tbody></div>";
+        all_data = "";
+        for (var flight of ex_flight_records){
+            var current_header = "<div class='card h-100 border-left-primary'><div class='card-body'><div class='row align-items-center'><div class='col'><h5 class='card-title main-title'>" +
+            flight.segments[0].airline + "</h5><h6 class='card-title'>Total Duration: " +
+            flight.total_time + "</h6></div><div class='col-auto'>" +
+            "<button type='submit' class='btn btn-primary form-control' name='external_flight_choice' value='" + JSON.stringify(flight) + "' onClick='book_external(event, this.value)'>Book Flight</button></div></div><div class='container-responsive'><table class='table table-striped'><thead><tr><td>Segment</td><td>Flight No</td><td>Departure Airport</td><td>Departure Time</td><td>Arrival Airport</td><td>Arrival Time</td><td>Duration</td><td>Aircraft</td></tr></thead><tbody>";
+            var current_footer = "</tbody></table></div></div></div>"
+            ex_segments = flight.segments;
+            allRow = "";
+            for (index = 0; index < ex_segments.length; index++){
+                ex_flight = ex_segments[index];
+                var segment_no = index + 1;
+                var flightDepartureDate = ex_flight.departure_time;
+                var flightArrivalDate = ex_flight.arrival_time;
+                currentRow=
+                    "<tr><td>" + segment_no + "</td>" +
+                    "<td>" + ex_flight.flight_id + "</td>" +
+                    "<td>" + ex_flight.departure_airport + "</td>" +
+                    "<td>" + ex_flight.departure_time + "</td>" +
+                    "<td>" + ex_flight.arrival_airport + "</td>" +
+                    "<td>" + ex_flight.arrival_time + "</td>" +
+                    "<td>" + ex_flight.duration + "</td>" +
+                    "<td>" + ex_flight.aircraft_type + "</td></tr>"
+                allRow += currentRow;
+            }
+            all_data += current_header + allRow + current_footer
+        }
+        final_output += header + all_data + footer;
+        $('#flight_search_results').text("");
+        $('#flight_search_results').append(final_output);
+        $('#external_status').removeClass('spinner-border spinner-border-sm');
+    }
+    catch(error){
+        console.log(error)
+        $('#flight_search_results').text(" ");
+        $('#external_status').removeClass('spinner-border spinner-border-sm');
+        alert("Error in retrieving information from Amadeus Database")
+    }
+});
+</script>
+
+<script>
+    $("#passengerFlightSearch").submit(async (event) =>  {
+        if (ip == "http://127.0.0.1") {
+            port = "5001"
+            serviceURL = ip + ":" + port + "/flight-records/";
+        } else {
+            serviceURL = ip + ":" + port + delaySystem + "/flight/flight-records/";
+        }
+        event.preventDefault();
+        $("#pax_flight_data").find("tr:gt(0)").remove();
+        $('#error').text("");
+        //var serviceURL = "http://127.0.0.1:5001/flight-records/";
+        var pid = $('#pid').val();
+
+        var paxURL = serviceURL + pid;
+
+        try {
+            const response =
+            await fetch(
+            paxURL, { method: 'GET', headers: {
+           'Authorization': token_type + ' ' + access_token,
+           'Content-Type': 'application/x-www-form-urlencoded'
+           }});
+            // const response = await fetch(paxURL, { method: 'GET'});
+            const data = await response.json();
+            var flight_records = data.message;
+            $("#flight_search_results").append(flight_records);
+            if (!response.ok || !flight_records.length) {
+                        alert('No avaliable flight records found')
+                    }else{
+                        var rows = "";
+                        for (const flight_record of flight_records){
+                            console.log(flight_record)
+                            var flightDepartureDate = flight_record.departure_date;
+                            var flightArrivalDate = flight_record.arrival_date;
+                            eachRow =
+                                "<td>" + flight_record.fid + "</td>" +
+                                "<td>" + flightDepartureDate.substring(0, flightDepartureDate.length - 12) + "</td>" +
+                                "<td>" + flight_record.departure_airport  + "</td>" +
+                                "<td>" + flight_record.departure_time+ "</td>" +
+                                "<td>" + flightArrivalDate.substring(0, flightArrivalDate.length - 12)+ "</td>" +
+                                "<td>" + flight_record.arrival_airport + "</td>" +
+                                "<td>" + flight_record.arrival_time + "</td>" +
+                                "<td>" + flight_record.travel_time + "</td>" +
+                                "<td>" + flight_record.fare_class+ "</td>"+
+                                "<td>" + flight_record.ticket_status+ "</td>"
+                            rows += "<tbody><tr>" + eachRow + "</tr></tbody>"
+                        }
+                        $('#pax_flight_data').append(rows);
+                    }
+        } catch (error) {
+        alert("Please enter a valid Passenger ID");
+        }
+    });
+</script>
+<script>
+    $("#internal_flight_search_form").submit(async(event) => {
+        event.preventDefault();
+        if (ip == "http://127.0.0.1") {
+            port = "5001"
+            SearchURLInternal = ip + ":" + port + "/flight-records/searchflights_internal";
+        } else {
+            SearchURLInternal = ip + ":" + port + delaySystem + "/flight/flight-records/searchflights_internal";
+        }
+        var origin_airport = $("#origin_airport_internal").val();
+        var destination_airport = $("#destination_airport_internal").val();
+        //var SearchURLInternal = "http://127.0.0.1:5001/flight-records/searchflights_internal";
+        var internal_flight_info = {
+            "origin_airport":origin_airport,
+            "destination_airport":destination_airport
+        }
+        try{
+            $('#internal_status').addClass('spinner-border spinner-border-sm');
+            const response =
+            await fetch(
+               SearchURLInternal, { method: 'POST', headers: {'Authorization': token_type + ' ' + access_token, "Content-Type": "application/json" }, mode: 'cors', body: JSON.stringify(internal_flight_info) }
+            );
+            const data = await response.json();
+            var all_records = data.message;
+            var header ="<div class='row'><div class='form-group'><div class='col-auto'><div class='input-group'><div class='input-group-prepend'><span class='input-group-text' id='basic-addon1'>Passenger ID</span></div><input type='text' class='form-control' required placeholder='Scan/Input Passenger ID' id='booking_pax_id'></div></div></div><div class='form-group'><div class='col-auto'><div class='input-group'><div class='input-group-prepend'><span class='input-group-text' id='basic-addon2'>Fare Class</span></div><select class='form-control' id='internal_travel_class'><option>ECONOMY</option> <option>BUSINESS</option><option>FIRST</option></select></div></div></div><div class='col'><div class='form-group'><div class='input-group'><div class='input-group-prepend'><span class='input-group-text' id='basic-addon3'>Remarks</span></div><input type='text' required class='form-control'  id='booking_remarks'></div></div></div><div class='form-group'><div class='col-auto'><button type='submit' class='btn btn-primary form-control' id='internal_flight_booking'>Place Booking</div></div></div>" +
+            "<table class='table table-striped'><thead><tr><td>Flight No</td><td>Departure Airport</td><td>Departure Date</td><td>Departure Time</td><td>Arrival Airport</td><td>Arrival Date</td><td>Arrival Time</td><td>Duration</td><td>Airline</td><td>Book Flight</td></tr></thead>" +
+            "<tbody>";
+            var footer = "</tbody></table>";
+
+            var allRow = "";
+            if (all_records.length == 0){
+                allRow = "<tr><td colspan=10>No such flights exist in the database, please search for all possible flights using the Amadeus Database</td></tr>";
+            }
+            else{
+                for (var flight of all_records){
+
+                    newRow = "<tr><td>" + flight.fid + "</td><td>" +
+                    flight.departure_airport + "</td><td>" +
+                    flight.departure_date + "</td><td>" +
+                    flight.departure_time + "</td><td>" +
+                    flight.arrival_airport + "</td><td>" +
+                    flight.arrival_date + "</td><td>" +
+                    flight.arrival_time + "</td><td>" +
+                    flight.travel_time + "</td><td>" +
+                    flight.airline + "</td><td>" +
+                    "<input type='radio' name='internal_flight_choice' value='" + JSON.stringify(flight) + "' />" + "</td></tr>";
+                    allRow += newRow;
+                }
+            }
+            var printItem = header + allRow + footer;
+            $('#internal_search_results').text(" ");
+            $('#internal_search_results').append(printItem);
+            $('#internal_status').removeClass('spinner-border spinner-border-sm');
+        }
+        catch(error){
+            console.log(error)
+            $('#internal_search_results').text(" ");
+            $('#internal_status').removeClass('spinner-border spinner-border-sm');
+            alert("Error in retrieving information from Flight Database")
+        }
+    });
+    $("#internal_flight_booking_form").submit(async(event) => {
+        event.preventDefault();
+        if (ip == "http://127.0.0.1") {
+            port = "5001"
+            bookURLInternal = ip + ":" + port + "/flight-records/book";
+        } else {
+            bookURLInternal = ip + ":" + port + delaySystem + "/flight/flight-records/book";
+        }
+        var flight = JSON.parse($("input[name='internal_flight_choice']:checked","#internal_flight_booking_form").val());
+        //var bookURLInternal = "http://127.0.0.1:5001/flight-records/book";
+        var flight_info = flight;
+        console.log(flight_info);
+        var flight_booking = {
+            pid:$('#booking_pax_id').val(),
+            flights:[
+                {
+                fid:flight_info.fid,
+                departure_airport:flight_info.departure_airport,
+                departure_date:flight_info.departure_date,
+                departure_time:flight_info.departure_time,
+                arrival_airport:flight_info.arrival_airport,
+                arrival_date:flight_info.arrival_date,
+                arrival_time:flight_info.arrival_time,
+                airline:flight_info.airline,
+                travel_time:flight_info.travel_time,
+                fare_class:$('#internal_travel_class').val(),
+                remarks:$('#booking_remarks').val()
+                }
+            ]
+        };
+        try{
+            $('#internal_status').addClass('spinner-border spinner-border-sm');
+            const response =
+            await fetch(
+               bookURLInternal, { method: 'POST', headers: {'Authorization': token_type + ' ' + access_token, "Content-Type": "application/json" }, mode: 'cors', body: JSON.stringify(flight_booking) }
+            );
+            const data = await response.json();
+            var all_records = data.message;
+            alert(all_records);
+            $('#internal_status').removeClass('spinner-border spinner-border-sm');
+            window.location.href = "flight.html"
+        }
+        catch(error){
+            console.log(error)
+            alert("Error in booking")
+        }
+    });
+
+    async function book_external(event, clicked_id)
+    {
+        event.preventDefault()
+        flights = JSON.parse(clicked_id)
+        if (ip == "http://127.0.0.1") {
+            port = "5001"
+            bookURLInternal = ip + ":" + port + "/flight-records/book";
+        } else {
+            bookURLInternal = ip + ":" + port + delaySystem + "/flight/flight-records/book";
+        }
+        //var bookURLInternal = "http://127.0.0.1:5001/flight-records/book";
+        var array = [];
+        var segments = flights.segments;
+        console.log(segments)
+        for (let i = 0; i < segments.length; i++) {
+            flight = segments[i];
+            var departure_date = flight.departure_time.slice(0,10);
+            var departure_time = flight.departure_time.slice(11,19);
+            var arrival_date = flight.arrival_time.slice(0,10);
+            var arrival_time = flight.arrival_time.slice(11,19);
+            newFlight =
+            {
+                fid:flight.flight_id,
+                departure_airport:flight.departure_airport,
+                departure_date:departure_date,
+                departure_time:departure_time,
+                arrival_airport:flight.arrival_airport,
+                arrival_date:arrival_date,
+                arrival_time:arrival_time,
+                airline:flight.airline,
+                travel_time:flight.duration,
+                fare_class:$('#travel_class').val(),
+                remarks:$('#external_booking_remarks').val()
+            };
+            array.push(newFlight);
+        }
+        var flight_booking =
+        {
+            pid:$('#external_booking_pax_id').val(),
+            flights:array
+        }
+        var booking = flight_booking;
+        try{
+            $('#external_status').addClass('spinner-border spinner-border-sm');
+            const response =
+            await fetch(
+               bookURLInternal, { method: 'POST', headers: {'Authorization': token_type + ' ' + access_token, "Content-Type": "application/json" }, mode: 'cors', body: JSON.stringify(booking) }
+            );
+            const data = await response.json();
+            console.log(JSON.stringify(flight_booking));
+            var all_records = data.message;
+            alert(all_records);
+            $('#internal_status').removeClass('spinner-border spinner-border-sm');
+            window.location.href = "flight.html"
+        }
+        catch(error){
+            console.log(error)
+            alert("Error in booking")
+        }
+    };
+
+
+</script>

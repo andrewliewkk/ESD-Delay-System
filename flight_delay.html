@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css"
+        integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+
+    <script src="https://code.jquery.com/jquery-3.4.1.slim.min.js"
+        integrity="sha384-J6qa4849blE2+poT4WnyKhv5vZF5SrPo0iEjwBvKU7imGFAV0wwj1yYfoRSJoZ+n"
+        crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"
+        integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo"
+        crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js"
+        integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6"
+        crossorigin="anonymous"></script>
+
+    <link href="vendor/fontawesome-free/css/all.min.css" rel="stylesheet" type="text/css">
+    <link
+        href="https://fonts.googleapis.com/css?family=Nunito:200,200i,300,300i,400,400i,600,600i,700,700i,800,800i,900,900i"
+        rel="stylesheet">
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jQuery.Marquee/1.5.0/jquery.marquee.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-easing/1.4.1/jquery.easing.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/js-cookie@rc/dist/js.cookie.min.js"></script>
+    <link href="index.css" rel="stylesheet">
+
+    <title>Flight Delay</title>
+</head>
+<script>
+    $(async() => {
+        var url = window.location.href;
+        window.ip = url.split('/')[2].split(':')[0];
+        window.port = "8000"
+        window.delaySystem = "/delay-system"
+        console.log(ip)
+        if (ip == "" || ip == "localhost") {
+            window.ip = "http://127.0.0.1"
+            service_recovery_port = "5002"
+            passenger_port = "5003"
+            flight_port = "5001"
+            flight_status_port = "5004"
+            payment_port = "5005"
+        }
+        else{
+            window.ip = "http://" + ip
+        }
+        console.log(ip)
+    });
+</script>
+<!-- Items needs for authentication-->
+<div id="api_modal" class="modal fade" data-backdrop="static" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-login">
+        <div class="modal-content">
+            <form id="api_modal_form">
+                <div class="modal-header">
+                    <h4 class="modal-title">Flight Staff Access</h4>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <div class="clearfix">
+                            <label>Username</label>
+                        </div>
+                        <input type="text" class="form-control" required="required" id='oauth-username'>
+                    </div>
+                    <div class="form-group">
+                        <div class="clearfix">
+                            <label>Password</label>
+                        </div>
+                        <input type="password" class="form-control" required="required" id='oauth-password'>
+                    </div>
+                    <div id="modal_api_msg">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <input type="submit" class="btn btn-primary pull-right" value="Login">
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<script>
+function api_check(){
+try{
+    var bearer_token = Cookies.get('token');
+    if (bearer_token == null){
+        $('#api_modal').modal('show')
+        }
+        else{
+            window.token_type = Cookies.get('token_type');
+            window.access_token = Cookies.get('token');
+            console.log(access_token)
+        }
+}
+catch(error){
+    alert(error)
+}}
+api_check()
+</script>
+<script>
+$("#api_modal_form").submit(async (event) => {
+    event.preventDefault()
+    var client_id = $("#oauth-username").val()
+    var client_secret = $("#oauth-password").val()
+    var grant_type = "client_credentials"
+    var provision_key = "5XlzYHaMyaEtQZAub1EXIbKTdJI0bpYd"
+    if (ip == "http://127.0.0.1") {
+        port = "5004"
+        checkURL = "http://localhost:8000/oauth2/token";
+    } else {
+        checkURL = ip + ":8000/oauth2/token";
+    }
+    //var checkURL = "http://localhost:8000/oauth2/token"
+    var auth_request = 'grant_type=client_credentials&client_id=' + client_id + '&client_secret=' + client_secret
+    console.log(auth_request)
+    try {
+        const response = await fetch(
+        checkURL, { method: 'POST' ,headers: { 'Content-Type': 'application/x-www-form-urlencoded','X-Forwarded-Proto':'https' },
+        body: 'grant_type=client_credentials&client_id=' + client_id + '&client_secret=' + client_secret
+        });
+        const data = await response.json();
+        bearer_token = data.access_token;
+        token_type = data.token_type;
+        console.log(data)
+        if (response.status != 200){
+            alert('Authentication invalid, please try again')
+        }
+        else{
+            $('#api_modal').modal('hide');
+            Cookies.set('token',bearer_token);
+            window.bearer_token
+            console.log(bearer_token)
+            Cookies.set('token_type',token_type);
+            window.token_type
+            console.log(Cookies.get('token'));
+            location.reload()
+        }
+    } catch (error) {
+        alert(error)
+    }
+})
+</script>
+<body>
+    <div class="container">
+        <div class="row">
+        <div class="col">
+        </div>
+        <div class="col-md-auto">
+            <div class="card text-center">
+                <div class="card-header">
+                    <img src="image/company-header.png" class="card-img-top" alt="...">
+                </div>
+                <div class="card-body">
+                <h5 class="card-title h2">FLIGHT DELAY INFORMATION</h5>
+                    <hr>
+                <div class="card-group">
+                    <div class="card bg-light">
+                    <div class="card-body">
+                        <h5 class="card-title" >FLIGHT</h5>
+                        <p class="card-text h1 font-weight-bold text-danger">SQ 201</p>
+                    </div>
+                    </div>
+                    <div class="card bg-light">
+                    <div class="card-body">
+                        <h5 class="card-title" >DESTINATION</h5>
+                        <p class="card-text h1 font-weight-bold text-danger" id='arrive' id ='fid'>SINGAPORE</p>
+                    </div>
+                    </div>
+                </div>
+                <br>
+                <div class="card-group">
+                    <div class="card bg-light" >
+                    <div class="card-body">
+                        <h5 class="card-title">REVISED DEPARTURE</h5>
+                        <p class="card-text h1 font-weight-bold text-danger" id='etd'>2050 HRS</p>
+                    </div>
+                    </div>
+                    <div class="card bg-light" >
+                    <div class="card-body">
+                        <h5 class="card-title">ESTIMATED ARRIVAL</h5>
+                        <p class="card-text h1 font-weight-bold text-danger" id='eta'>2359 HRS</p>
+                    </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-body h2 mb-0" id='status'>
+
+                    <hr>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div id="scroll_header"><span>More information will be available soon</span></div>
+                    </div>
+                </div>
+                <script>
+                    $(document).ready(function(){
+                            $(async() => {
+                            // Change serviceURL to your own
+                            if (ip == "http://127.0.0.1") {
+                                port = "5004"
+                                serviceURL = ip + ":" + port + "/checkflight";
+                            } else {
+                                serviceURL = ip + ":" + port + delaySystem + "/flight_status/checkflight";
+                            }
+                                //var serviceURL = "http://127.0.0.1:5004/checkflight";
+                                try {
+                                const response =
+                                    await fetch(
+                                    serviceURL, { method: 'GET', headers: {
+                                    'Authorization': token_type + ' ' + access_token,
+                			        'Content-Type': 'application/x-www-form-urlencoded'
+                                     } });
+                                    const data = await response.json();
+                                    var flight = data.message;
+                                    if (flight.length == 0) {
+                                        $('#fid').text("TBA");
+                                        $('#arrive').text("TBA");
+                                        $('#etd').text("TBA");
+                                        $('#eta').text("TBA");
+                                        $('#status').text("More information will be avaliable shortly");
+                                    }
+                                    $('#fid').text(flight.fid);
+                                    $('#arrive').text(flight.arrive);
+                                    $('#etd').text(flight.etd);
+                                    $('#eta').text(flight.eta);
+                                    $('#status').text(flight.status);
+                                } catch (error) {
+                                    $('#fid').text("TBA");
+                                    $('#arrive').text("TBA");
+                                    $('#etd').text("TBA");
+                                    $('#eta').text("TBA");
+                                    $('#status').text("More information will be avaliable shortly");
+                                } // error
+                            })
+                        });
+                        $(document).ready(function(){
+                            $(async() => {
+                                if (ip == "http://127.0.0.1") {
+                                    port = "5004"
+                                    scrollURL = ip + ":" + port + "/flight_status/message";
+                                } else {
+                                    scrollURL = ip + ":" + port + delaySystem + "/flight_status/flight_status/message";
+                                }
+                                //var scrollURL = "http://127.0.0.1:5004/flight_status/message";
+                                try {
+                                const response =
+                                    await fetch(
+                                    scrollURL, { method: 'GET', headers: {
+                                    'Authorization': token_type + ' ' + access_token,
+                			        'Content-Type': 'application/x-www-form-urlencoded'
+                                     } });
+                                    const data = await response.json();
+                                    var message_data = data.message;
+                                    if (message_data.length == 0) {
+                                        $('#scroll_header span').text('We are working hard to release more inforamtion soon')
+                                    }
+                                    else {
+                                        var full_msg = "";
+                                        for (index = 0; index < message_data.length; index++){
+                                            var msg = message_data[index];
+                                            var main_msg = msg.message;
+                                            var issuedatetime = msg.issue_datetime;
+                                            var main_mid = msg.mid;
+                                            var temp = main_msg + " (Update at: " + issuedatetime + ")<br />";
+                                            full_msg += temp;
+                                        }
+                                    $('#scroll_header span').text("")
+                                    $('#scroll_header span').append(full_msg)
+                                    }
+                                } catch (error) {
+                                    console.log(error)
+                                    $('#scroll_header span').text('We are working hard to release more information soon');
+                                }
+                            })
+                        });
+                    </script>
+                <div class="card">
+                    <div class="card-body">
+                        <p class="font-weight-bold">
+                            Flight Disruption Statement
+                        </p>If your flight was disrupted and you need documentary proof,<br>
+                        please approach any of our service desks to request for a Flight Disruption Statement.<br />
+                        Free WiFi is avaliable for your use
+                    </div>
+                </div>
+                </div>
+                <div class="card-footer text-muted">
+                Please contact your local Singapore Airlines offices for any related services.<br>
+                We apologise for the inconvenience caused.<br>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+        </div>
+        </div>
+    </div>
+    </body>
