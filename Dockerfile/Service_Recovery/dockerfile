@@ -1,0 +1,20 @@
+FROM python:3
+WORKDIR /usr/src/app
+COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
+COPY ./service_recovery.py .
+COPY ./auth.py .
+COPY ./credentials.json .
+COPY ./send_email.py .
+COPY ./tempCodeRunnerFile.py .
+COPY ./token.pickle .
+COPY ./.credentials .
+COPY ./.credentials/credentials.json ./.credentials/
+COPY ./.credentials/python-gmail-api.json ./.credentials/
+RUN mkdir -p /usr/src/app/vouchers/images
+RUN mkdir -p /usr/src/app/vouchers/font
+RUN mkdir -p /usr/src/app/vouchers/vouchers
+COPY ./vouchers/images/background.jpg ./vouchers/images
+COPY ./vouchers/font ./vouchers
+COPY ./vouchers/font/Helvetica.ttf ./vouchers/font
+CMD [ "python", "./service_recovery.py" ]

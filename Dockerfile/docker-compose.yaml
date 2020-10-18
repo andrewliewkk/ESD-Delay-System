@@ -1,0 +1,278 @@
+version: "3"
+
+services:
+
+  flight:
+    command:
+      - 'python ./flight.py'
+    container_name: flight
+    environment:
+      - dbURL=mysql+mysqlconnector://delaysystem@host.docker.internal:3306/flight
+      - PATH=/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+      - LANG=C.UTF-8
+      - GPG_KEY=E3FF2839C048B25C084DEBE9B26995E310250568
+      - PYTHON_VERSION=3.8.1
+      - PYTHON_PIP_VERSION=20.0.2
+      - PYTHON_GET_PIP_URL=https://github.com/pypa/get-pip/raw/d59197a3c169cef378a22428a3fa99d33e080a5d/get-pip.py
+      - PYTHON_GET_PIP_SHA256=421ac1d44c0cf9730a088e337867d974b91bdce4ea2636099275071878cc189e
+    image: project/flight:1.0.0
+    ipc: private
+    logging:
+      driver: json-file
+      options: {}
+    networks:
+        - kong-net
+    working_dir: /usr/src/app
+
+  flight_status:
+    command:
+      - 'python ./flight_status.py'
+    container_name: flight_status
+    environment:
+      - dbURL=mysql+mysqlconnector://delaysystem@host.docker.internal:3306/flight_status
+      - PATH=/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+      - LANG=C.UTF-8
+      - GPG_KEY=E3FF2839C048B25C084DEBE9B26995E310250568
+      - PYTHON_VERSION=3.8.1
+      - PYTHON_PIP_VERSION=20.0.2
+      - PYTHON_GET_PIP_URL=https://github.com/pypa/get-pip/raw/d59197a3c169cef378a22428a3fa99d33e080a5d/get-pip.py
+      - PYTHON_GET_PIP_SHA256=421ac1d44c0cf9730a088e337867d974b91bdce4ea2636099275071878cc189e
+    image: project/flight_status:1.0.0
+    ipc: private
+    logging:
+      driver: json-file
+      options: {}
+    networks:
+        - kong-net
+    working_dir: /usr/src/app
+
+  kong-database:
+    command:
+      - postgres
+    container_name: kong-database
+    entrypoint:
+      - docker-entrypoint.sh
+    environment:
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=kong
+      - POSTGRES_USER=kong
+      - PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/lib/postgresql/9.6/bin
+      - GOSU_VERSION=1.11
+      - LANG=en_US.utf8
+      - PG_MAJOR=9.6
+      - PG_VERSION=9.6.17-2.pgdg90+1
+      - PGDATA=/var/lib/postgresql/data
+    expose:
+      - 5432/tcp
+    image: postgres:9.6
+    ipc: private
+    logging:
+      driver: json-file
+      options: {}
+    networks:
+        - kong-net
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  konga:
+    container_name: konga
+    entrypoint:
+      - /app/start.sh
+    environment:
+      - PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+      - NODE_VERSION=10.16.3
+      - YARN_VERSION=1.17.3
+    image: pantsel/konga
+    ipc: private
+    logging:
+      driver: json-file
+      options: {}
+    networks:
+        - kong-net
+    ports:
+      - 1337:1337/tcp
+    volumes:
+      - kongadata:/app/kongadata
+    working_dir: /app
+
+  passenger:
+    command:
+      - 'python ./passenger.py'
+    container_name: passenger
+    environment:
+      - dbURL=mysql+mysqlconnector://delaysystem@host.docker.internal:3306/passenger
+      - PATH=/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+      - LANG=C.UTF-8
+      - GPG_KEY=E3FF2839C048B25C084DEBE9B26995E310250568
+      - PYTHON_VERSION=3.8.1
+      - PYTHON_PIP_VERSION=20.0.2
+      - PYTHON_GET_PIP_URL=https://github.com/pypa/get-pip/raw/d59197a3c169cef378a22428a3fa99d33e080a5d/get-pip.py
+      - PYTHON_GET_PIP_SHA256=421ac1d44c0cf9730a088e337867d974b91bdce4ea2636099275071878cc189e
+    image: project/passenger:1.0.0
+    ipc: private
+    logging:
+      driver: json-file
+      options: {}
+    networks:
+        - kong-net
+    working_dir: /usr/src/app
+
+  payment:
+    command:
+      - 'python ./payment.py'
+    container_name: payment
+    environment:
+      - PATH=/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+      - LANG=C.UTF-8
+      - GPG_KEY=E3FF2839C048B25C084DEBE9B26995E310250568
+      - PYTHON_VERSION=3.8.1
+      - PYTHON_PIP_VERSION=20.0.2
+      - PYTHON_GET_PIP_URL=https://github.com/pypa/get-pip/raw/d59197a3c169cef378a22428a3fa99d33e080a5d/get-pip.py
+      - PYTHON_GET_PIP_SHA256=421ac1d44c0cf9730a088e337867d974b91bdce4ea2636099275071878cc189e
+    image: project/payment:1.0.0
+    ipc: private
+    logging:
+      driver: json-file
+      options: {}
+    networks:
+        - kong-net
+    working_dir: /usr/src/app
+
+  project_rabbit:
+    command:
+      - rabbitmq-server
+    container_name: project_rabbit
+    entrypoint:
+      - docker-entrypoint.sh
+    environment:
+      - PATH=/opt/rabbitmq/sbin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+      - OPENSSL_VERSION=1.1.1e
+      - OPENSSL_SOURCE_SHA256=694f61ac11cb51c9bf73f54e771ff6022b0327a43bbdfa1b2f19de1662a6dcbe
+      - 'OPENSSL_PGP_KEY_IDS=0x8657ABB260F056B1E5190839D9C4D26D0E604491 0x5B2545DAB21995F4088CEFAA36CEE4DEB00CFE33
+        0xED230BEC4D4F2518B9D7DF41F0DB4D21C1D35231 0xC1F33DD8CE1D4CC613AF14DA9195C48241FBF7DD
+        0x7953AC1FBC3DC8B3B292393ED5E9E43F7DF9EE8C 0xE5E52560DD91C556DDBDA5D02064C53641C25E5D'
+      - OTP_VERSION=22.3
+      - OTP_SOURCE_SHA256=886e6dbe1e4823c7e8d9c9c1ba8315075a1a9f7717f5a1eaf3b98345ca6c798e
+      - RABBITMQ_DATA_DIR=/var/lib/rabbitmq
+      - RABBITMQ_VERSION=3.8.3
+      - RABBITMQ_PGP_KEY_ID=0x0A9AF2115F4687BD29803A206B73A36E6026DFCA
+      - RABBITMQ_HOME=/opt/rabbitmq
+      - RABBITMQ_LOGS=-
+      - HOME=/var/lib/rabbitmq
+      - LANG=C.UTF-8
+      - LANGUAGE=C.UTF-8
+      - LC_ALL=C.UTF-8
+    hostname: project_rabbit
+    image: rabbitmq:3-management
+    ipc: private
+    logging:
+      driver: json-file
+      options: {}
+    networks:
+      - kong-net
+    ports:
+      - 8080:15672/tcp
+
+  service_recovery:
+    command:
+      - 'python ./service_recovery.py'
+    container_name: service_recovery
+    environment:
+      - dbURL=mysql+mysqlconnector://delaysystem@host.docker.internal:3306/service_recovery
+      - PATH=/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+      - LANG=C.UTF-8
+      - GPG_KEY=E3FF2839C048B25C084DEBE9B26995E310250568
+      - PYTHON_VERSION=3.8.1
+      - PYTHON_PIP_VERSION=20.0.2
+      - PYTHON_GET_PIP_URL=https://github.com/pypa/get-pip/raw/d59197a3c169cef378a22428a3fa99d33e080a5d/get-pip.py
+      - PYTHON_GET_PIP_SHA256=421ac1d44c0cf9730a088e337867d974b91bdce4ea2636099275071878cc189e
+    image: project/service_recovery:1.0.0
+    ipc: private
+    logging:
+      driver: json-file
+      options: {}
+    networks:
+        - kong-net
+    working_dir: /usr/src/app
+
+  kong:
+    cap_add:
+        - AUDIT_WRITE
+        - CHOWN
+        - DAC_OVERRIDE
+        - FOWNER
+        - FSETID
+        - KILL
+        - MKNOD
+        - NET_BIND_SERVICE
+        - NET_RAW
+        - SETFCAP
+        - SETGID
+        - SETPCAP
+        - SETUID
+        - SYS_CHROOT
+    cap_drop:
+        - AUDIT_CONTROL
+        - BLOCK_SUSPEND
+        - DAC_READ_SEARCH
+        - IPC_LOCK
+        - IPC_OWNER
+        - LEASE
+        - LINUX_IMMUTABLE
+        - MAC_ADMIN
+        - MAC_OVERRIDE
+        - NET_ADMIN
+        - NET_BROADCAST
+        - SYSLOG
+        - SYS_ADMIN
+        - SYS_BOOT
+        - SYS_MODULE
+        - SYS_NICE
+        - SYS_PACCT
+        - SYS_PTRACE
+        - SYS_RAWIO
+        - SYS_RESOURCE
+        - SYS_TIME
+        - SYS_TTY_CONFIG
+        - WAKE_ALARM
+    command:
+        - 'kong docker-start'
+    container_name: kong
+    entrypoint:
+        - /docker-entrypoint.sh
+    environment:
+        - KONG_DATABASE=postgres
+        - KONG_PG_HOST=kong-database
+        - KONG_PG_USER=kong
+        - KONG_PG_PASSWORD=password
+        - KONG_PROXY_LISTEN=0.0.0.0:8000
+        - KONG_ADMIN_LISTEN=0.0.0.0:8001
+        - PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+        - KONG_VERSION=2.0.2
+        - KONG_SHA256=befe736bfde51e27ae51a0d6a827df44a1669099dea459d430aef0d570cc4db7
+        - KONG_TRUSTED_IPS=0.0.0.0/0,::/0
+    depends_on:
+        - kong-database
+    image: kong:latest
+    ipc: private
+    labels:
+        maintainer: 'Kong Core Team <team-core@konghq.com>'
+    logging:
+        driver: json-file
+        options: {}
+    networks:
+        - kong-net
+    ports:
+        - 8000:8000/tcp
+        - 8001:8001/tcp
+    stdin_open: true
+    tty: true
+    user: kong
+
+networks:
+  kong-net:
+    external: true
+
+volumes:
+    pgdata: {}
+    kongadata: {}

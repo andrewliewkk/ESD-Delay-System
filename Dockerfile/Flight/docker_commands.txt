@@ -1,0 +1,2 @@
+docker build -t project/flight:1.0.0 .
+docker run -d --name=flight --network=kong-net -e  dbURL=mysql+mysqlconnector://is213@host.docker.internal:3306/flight project/flight:1.0.0

@@ -1,0 +1,2 @@
+docker build -t project/payment:1.0.0 .
+docker run -d --name=payment --network=kong-net  project/payment:1.0.0
